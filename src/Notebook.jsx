@@ -175,6 +175,7 @@ export default function Notebook({ user, onShowBirthday }) {
   const [photoSel, setPhotoSel] = useState(null); // { id, outline }
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   const fileInput = useRef(null);
+  const backupInput = useRef(null);
 
   // Which two-page spread is open (0 = pages 1–2).
   const [spread, setSpread] = useState(0);
@@ -404,6 +405,7 @@ export default function Notebook({ user, onShowBirthday }) {
   useEffect(() => {
     if (!api) return;
     apiRef.current = api;
+    if (import.meta.env.DEV) window.__notebookApi = api; // for local testing only
     initialData.then(({ elements }) => {
       fetchMissingFiles(elements);
       setLastUsed(lastUsedRef.current);
@@ -981,6 +983,98 @@ export default function Notebook({ user, onShowBirthday }) {
     </div>
   );
 
+  /**
+   * Bring back anything from a backup file that's missing from the notebook
+   * (deleted drawings/photos/pages, cleared titles/dates). Nothing that's in
+   * the notebook now is changed or overwritten. Asks first; undoable.
+   */
+  const restoreBackup = async (file) => {
+    const ex = apiRef.current;
+    if (!ex || !file) return;
+    const toast = (message) => ex.setToast({ message, closable: true, duration: 7000 });
+
+    let data;
+    try {
+      data = JSON.parse(await file.text());
+    } catch {
+      toast("That file isn't a notebook backup.");
+      return;
+    }
+    if (data?.type !== "excalidraw" || !Array.isArray(data.elements)) {
+      toast("That file isn't a notebook backup.");
+      return;
+    }
+
+    const fromBackup = restoreElements(data.elements, null);
+    const current = ex.getSceneElementsIncludingDeleted();
+    const byId = new Map(current.map((e) => [e.id, e]));
+    const changes = [];
+    let items = 0;
+    let titles = 0;
+
+    for (const b of fromBackup) {
+      if (b.isDeleted) continue;
+      const now = byId.get(b.id);
+      if (!now || now.isDeleted) {
+        // Missing or deleted since: bring it back with a newer version than
+        // the deletion, so it's saved and wins on every device.
+        changes.push({
+          ...b,
+          isDeleted: false,
+          version: Math.max(b.version, now?.version ?? 0) + 1,
+          versionNonce: Math.floor(Math.random() * 2 ** 31),
+          updated: Date.now(),
+        });
+        if (b.type !== "frame") items++;
+        else if (spreadMeta(b).title || spreadMeta(b).date) titles++;
+      } else if (isSpreadFrame(b)) {
+        // Page exists: fill in its title and/or date only where they're empty
+        // now (a title comes back with its font/size/colour/position).
+        const nowMeta = spreadMeta(now);
+        const oldMeta = spreadMeta(b);
+        const patch = {};
+        if (!nowMeta.title && oldMeta.title) {
+          for (const [k, v] of Object.entries(oldMeta)) if (k.startsWith("title")) patch[k] = v;
+          patch.title = oldMeta.title;
+        }
+        if (!nowMeta.date && oldMeta.date) patch.date = oldMeta.date;
+        if (Object.keys(patch).length) {
+          changes.push(withSpreadMeta(now, patch));
+          titles++;
+        }
+      }
+    }
+
+    if (!changes.length) {
+      toast("Nothing to restore: everything in that backup is already in the notebook.");
+      return;
+    }
+
+    const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+    const lines = [];
+    if (items) lines.push(`• ${plural(items, "missing item")} (drawings, writing, photos…)`);
+    if (titles) lines.push(`• titles/dates for ${plural(titles, "spread")}`);
+    const ok = window.confirm(
+      `Restore from "${file.name}"?\n\n${lines.join("\n")}\n\nNothing that's in the notebook now will be changed or overwritten. You can undo this.`,
+    );
+    if (!ok) return;
+
+    if (data.files) ex.addFiles(Object.values(data.files));
+    const changed = new Map(changes.map((e) => [e.id, e]));
+    ex.updateScene({
+      elements: [
+        ...current.map((e) => changed.get(e.id) || e),
+        ...changes.filter((e) => !byId.has(e.id)),
+      ],
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    });
+    toast(
+      `Restored ${[items && plural(items, "item"), titles && `titles/dates for ${plural(titles, "spread")}`]
+        .filter(Boolean)
+        .join(" and ")} from the backup.`,
+    );
+  };
+
   // ---------- UI ----------
 
   const connectionLabel = {
@@ -1041,6 +1135,16 @@ export default function Notebook({ user, onShowBirthday }) {
         </div>
       )}
       <input
+        ref={backupInput}
+        type="file"
+        accept=".excalidraw,application/json,.json"
+        hidden
+        onChange={(e) => {
+          restoreBackup(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+      <input
         ref={fileInput}
         type="file"
         accept="image/*,video/*"
@@ -1093,6 +1197,11 @@ export default function Notebook({ user, onShowBirthday }) {
             <MainMenu.Item onSelect={onShowBirthday}>Show birthday card 🎂</MainMenu.Item>
           )}
           <MainMenu.Item onSelect={downloadBackup}>Download backup</MainMenu.Item>
+          {!viewMode && (
+            <MainMenu.Item onSelect={() => backupInput.current?.click()}>
+              Restore from backup…
+            </MainMenu.Item>
+          )}
           <MainMenu.DefaultItems.SaveAsImage />
           <MainMenu.DefaultItems.SearchMenu />
           <MainMenu.DefaultItems.Help />

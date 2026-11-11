@@ -150,7 +150,11 @@ Show birthday card). Then run
 - **Download backup** in the ☰ menu saves everything (drawings, text, photos,
   titles, dates) as one `.excalidraw` file. Videos and GIFs stay in Supabase and
   aren't in the file. Supabase's free plan has no automatic backups, so grab one
-  now and then.
+  now and then. You can open a backup at excalidraw.com to look through it.
+- **Restore from backup…** in the ☰ menu brings back anything from a backup
+  that's missing from the notebook (deleted drawings, photos, pages, or cleared
+  titles/dates). It shows what it will restore and asks first; nothing that's in
+  the notebook now is changed or overwritten, and it can be undone.
 - **Supabase pauses free projects after about a week with no activity.** Your
   data isn't deleted, but the notebook won't load until you press **Restore
   project** in the Supabase dashboard (a few minutes). Opening the notebook
