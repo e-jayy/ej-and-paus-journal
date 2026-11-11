@@ -7,6 +7,7 @@ import {
   getSceneVersion,
   reconcileElements,
   restoreElements,
+  serializeAsJSON,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/excalidraw";
 import { backend } from "./backend";
@@ -61,7 +62,39 @@ function paperClip(el) {
 }
 const BROADCAST_MS = 80;
 const CURSOR_MS = 60;
-const SAVE_MS = 800;
+const SAVE_MS = 500;
+
+// Changes not yet confirmed saved are also kept on this device, so closing the
+// tab mid-save or being offline never loses anything: they're sent next time.
+// Each open tab keeps its own copy, so one tab closing can't erase another's.
+const UNSAVED_PREFIX = "our-notebook-unsaved:";
+const TAB_ID = Math.random().toString(36).slice(2);
+
+/** Collect (and clear) leftovers from any earlier tab on this device, once per page load. */
+let leftovers = null;
+const takeLeftoverUnsaved = () => (leftovers ??= collectLeftovers());
+const collectLeftovers = () => {
+  const out = [];
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith(UNSAVED_PREFIX)) continue;
+      try {
+        out.push(...JSON.parse(localStorage.getItem(key) || "[]"));
+      } catch {}
+      localStorage.removeItem(key);
+    }
+  } catch {}
+  return out;
+};
+const writeUnsaved = (map) => {
+  try {
+    const key = UNSAVED_PREFIX + TAB_ID;
+    if (map.size) localStorage.setItem(key, JSON.stringify([...map.values()]));
+    else localStorage.removeItem(key);
+  } catch {
+    // storage full or blocked: the in-memory retry still runs
+  }
+};
 
 // Videos and GIFs live on the page as "embeddable" elements whose link points
 // back here; renderEmbeddable swaps the iframe for a real <video>/<img>.
@@ -174,6 +207,7 @@ export default function Notebook({ user }) {
   const [status, setStatus] = useState("connecting");
   const [busyUploads, setBusyUploads] = useState(0);
   const [progress, setProgress] = useState(null); // { label, value: 0..1 | null }
+  const [saveState, setSaveState] = useState("saved"); // saved | saving | error
   const fileInput = useRef(null);
 
   // Which two-page spread is open (0 = pages 1–2).
@@ -200,6 +234,7 @@ export default function Notebook({ user }) {
     saveTimer: null,
     knownFiles: new Set(), // file ids already in storage
     dirty: new Set(), // ids changed on this device since the last page check
+    unsaved: new Map(), // id -> element not yet confirmed saved
     framesSig: "",
     fetching: new Set(),
     collaborators: new Map(),
@@ -211,12 +246,24 @@ export default function Notebook({ user }) {
 
   const initialData = useMemo(
     () =>
-      backend.loadElements().then((loaded) => {
+      backend.loadElements().then((fromServer) => {
+        let loaded = fromServer;
         const s = sync.current;
         for (const el of loaded) {
           s.versions.set(el.id, el.version);
           if (el.fileId) s.knownFiles.add(el.fileId);
         }
+        // Bring back anything this device changed but never got to save.
+        const byId = new Map(loaded.map((el) => [el.id, el]));
+        for (const el of takeLeftoverUnsaved()) {
+          const saved = byId.get(el.id);
+          if (!saved || el.version > saved.version) {
+            byId.set(el.id, el);
+            s.unsaved.set(el.id, el); // re-kept under this tab until it's saved
+          }
+        }
+        writeUnsaved(s.unsaved);
+        loaded = [...byId.values()];
         // Anything from before pages existed goes onto the first spread
         // (version bumps mean it's saved + shared on the first change pass).
         let elements = moveLooseContentOntoFirstSpread(restoreElements(loaded, null));
@@ -418,12 +465,20 @@ export default function Notebook({ user }) {
     if (!s.toSave.size) return;
     const batch = [...s.toSave.values()];
     s.toSave.clear();
+    setSaveState("saving");
     try {
       await backend.saveElements(batch);
+      for (const el of batch) {
+        if (s.unsaved.get(el.id)?.version === el.version) s.unsaved.delete(el.id);
+      }
+      writeUnsaved(s.unsaved);
+      setSaveState(s.toSave.size || s.unsaved.size ? "saving" : "saved");
     } catch (e) {
       console.error("Save failed, will retry", e);
       for (const el of batch) if (!s.toSave.has(el.id)) s.toSave.set(el.id, el);
-      s.saveTimer = setTimeout(flushSave, 3000);
+      writeUnsaved(s.unsaved);
+      setSaveState("error");
+      s.saveTimer = setTimeout(flushSave, 4000);
     }
   }, []);
 
@@ -490,11 +545,13 @@ export default function Notebook({ user }) {
           s.versions.set(el.id, el.version);
           s.toBroadcast.set(el.id, el);
           s.toSave.set(el.id, el);
+          s.unsaved.set(el.id, el);
           s.dirty.add(el.id);
           changed = true;
         }
       }
       if (!changed) return;
+      setSaveState((prev) => (prev === "error" ? prev : "saving"));
       if (!s.broadcastTimer) s.broadcastTimer = setTimeout(flushBroadcast, BROADCAST_MS);
       clearTimeout(s.saveTimer);
       s.saveTimer = setTimeout(flushSave, SAVE_MS);
@@ -580,22 +637,33 @@ export default function Notebook({ user }) {
           return Object.keys(kept).length === Object.keys(prev).length ? prev : kept;
         });
       },
-      onReconnect: () => backend.loadElements().then(applyRemoteElements).catch(console.error),
+      onReconnect: () => {
+        flushSave();
+        backend.loadElements().then(applyRemoteElements).catch(console.error);
+      },
     });
     room.current = r;
 
+    const keepAndFlush = () => {
+      writeUnsaved(s.unsaved);
+      flushSave();
+    };
     const flushOnHide = () => {
-      if (document.visibilityState === "hidden") flushSave();
+      if (document.visibilityState === "hidden") keepAndFlush();
     };
     document.addEventListener("visibilitychange", flushOnHide);
-    window.addEventListener("beforeunload", flushSave);
+    window.addEventListener("beforeunload", keepAndFlush);
+    window.addEventListener("pagehide", keepAndFlush);
+    window.addEventListener("online", flushSave);
 
     return () => {
-      flushSave();
+      keepAndFlush();
       r.leave();
       room.current = null;
       document.removeEventListener("visibilitychange", flushOnHide);
-      window.removeEventListener("beforeunload", flushSave);
+      window.removeEventListener("beforeunload", keepAndFlush);
+      window.removeEventListener("pagehide", keepAndFlush);
+      window.removeEventListener("online", flushSave);
     };
   }, [api, clientId, user, applyRemoteElements, flushSave]);
 
@@ -797,18 +865,49 @@ export default function Notebook({ user }) {
   const nextSpread = orderPos >= 0 && orderPos < order.length - 1 ? order[orderPos + 1] : null;
   const currentMeta = pagesMeta(frames.find((f) => f.id === spreadId(spread)));
 
+  /** Everything (drawings, text, photos, titles, dates) as one file. */
+  const downloadBackup = () => {
+    const ex = apiRef.current;
+    if (!ex) return;
+    const json = serializeAsJSON(
+      ex.getSceneElements(),
+      { ...ex.getAppState(), viewBackgroundColor: "#fffdf7" },
+      ex.getFiles(),
+      "local",
+    );
+    const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `our-notebook-${new Date().toISOString().slice(0, 10)}.excalidraw`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    ex.setToast({
+      message:
+        "Backup downloaded. Videos and GIFs stay in Supabase and aren't inside the file.",
+      closable: true,
+      duration: 6000,
+    });
+  };
+
   // ---------- UI ----------
 
-  const statusLabel = {
+  const connectionLabel = {
     connecting: "Connecting…",
     live: backend.mode === "demo" ? "Demo · live" : "Live",
     reconnecting: "Reconnecting…",
     offline: "Offline",
   }[status];
+  const saveLabel = {
+    saved: "Saved",
+    saving: "Saving…",
+    error: "Not saved yet, will keep trying",
+  }[saveState];
+  const statusLabel = `${connectionLabel} · ${saveLabel}`;
+  const statusClass = saveState === "error" ? "reconnecting" : status;
 
   const renderTopRightUI = (isMobile) => (
     <div className="top-right">
-      <span className={`status status-${status}`} title={statusLabel}>
+      <span className={`status status-${statusClass}`} title={statusLabel}>
         <i />
         {!isMobile && <span className="label">{statusLabel}</span>}
       </span>
@@ -895,6 +994,7 @@ export default function Notebook({ user }) {
           <MainMenu.Item onSelect={() => fileInput.current?.click()}>
             Add photo / video / GIF
           </MainMenu.Item>
+          <MainMenu.Item onSelect={downloadBackup}>Download backup</MainMenu.Item>
           <MainMenu.DefaultItems.SaveAsImage />
           <MainMenu.DefaultItems.SearchMenu />
           <MainMenu.DefaultItems.Help />

@@ -118,6 +118,25 @@ birthday message that pops up the first time she opens it. Then run
   iPad photos are converted to JPEG automatically, and videos are shrunk
   before upload (see below).
 
+## Saving, and keeping it for years
+- **Everything saves automatically**, about half a second after each change,
+  to the Supabase database. The dot at the top right says **Saved**,
+  **Saving…**, or **Not saved yet, will keep trying**. On narrow screens only
+  the dot shows, and it turns amber until saved.
+- **Nothing is lost if the tab closes mid-save or you're offline:** unsaved
+  changes are kept on that device and sent the next time the notebook is opened.
+- **Download backup** in the ☰ menu saves everything (drawings, text, photos,
+  titles, dates) as one `.excalidraw` file. Videos and GIFs stay in Supabase and
+  aren't in the file. Supabase's free plan has no automatic backups, so grab one
+  now and then.
+- **Supabase pauses free projects after about a week with no activity.** Your
+  data isn't deleted, but the notebook won't load until you press **Restore
+  project** in the Supabase dashboard (a few minutes). Opening the notebook
+  counts as activity. To avoid pauses entirely: use a free scheduled "ping"
+  service (e.g. cron-job.org) to open
+  `https://dqctktqgmfbcycazmkcr.supabase.co/rest/v1/` with the header
+  `apikey: <your anon key>` once a day, or upgrade to Supabase Pro.
+
 ## Running locally
 ```bash
 npm install
