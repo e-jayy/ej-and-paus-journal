@@ -76,7 +76,8 @@ on conflict do nothing;
 
 ## Personal touches
 Edit [`src/config.js`](src/config.js) to change the title, her name, and the
-birthday message that pops up the first time she opens it. Then run
+birthday message that pops up every time the notebook is opened (also in ☰ →
+Show birthday card). Then run
 `npm run deploy`.
 
 ## Using it

@@ -2,7 +2,7 @@
 
 export const NOTEBOOK_TITLE = "Our Notebook";
 
-// The birthday card that appears the first time she opens the notebook.
+// The birthday card that appears every time the notebook is opened.
 // Set SHOW_BIRTHDAY_CARD to false to turn it off.
 export const SHOW_BIRTHDAY_CARD = true;
 export const BIRTHDAY_NAME = "my love :33";

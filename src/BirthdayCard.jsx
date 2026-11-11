@@ -6,30 +6,18 @@ import {
   SHOW_BIRTHDAY_CARD,
 } from "./config";
 
-const KEY = "our-notebook-birthday-seen";
-
-function seen() {
-  try {
-    return localStorage.getItem(KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-/** Shows once per browser; `replay` (bumped from the menu) shows it again. */
+/**
+ * Shows every time the notebook is opened (right after the cover);
+ * `replay` (bumped from the ☰ menu) shows it again.
+ */
 export default function BirthdayCard({ replay = 0 }) {
-  const [open, setOpen] = useState(() => SHOW_BIRTHDAY_CARD && !seen());
+  const [open, setOpen] = useState(SHOW_BIRTHDAY_CARD);
   useEffect(() => {
     if (replay) setOpen(true);
   }, [replay]);
   if (!open) return null;
 
-  const close = () => {
-    try {
-      localStorage.setItem(KEY, "1");
-    } catch {}
-    setOpen(false);
-  };
+  const close = () => setOpen(false);
 
   return (
     <div className="birthday-backdrop" onClick={close}>
