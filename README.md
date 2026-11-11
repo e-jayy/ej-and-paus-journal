@@ -80,6 +80,11 @@ birthday message that pops up the first time she opens it. Then run
 `npm run deploy`.
 
 ## Using it
+- **Pages**: the notebook is a series of two-page spreads. Use **‹ ›** at the
+  bottom to turn pages; there's always one blank spread waiting at the end.
+  Anything that runs off the paper is clipped at the edge, and photos, videos
+  and text are kept fully on the page. Zoom in as far as you like. If the other
+  person is on a different spread, a "… is on pages 5–6 →" button takes you there.
 - **Draw / write**: the Excalidraw toolbar at the top (pen, text, shapes, arrows…).
 - **Photos, GIFs, videos**: the **＋ Photo / video / GIF** button, the ☰ menu,
   drag-and-drop, or paste. Click a video once to use its play controls.

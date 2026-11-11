@@ -3,7 +3,6 @@ import {
   CaptureUpdateAction,
   Excalidraw,
   MainMenu,
-  WelcomeScreen,
   convertToExcalidrawElements,
   getSceneVersion,
   reconcileElements,
@@ -24,8 +23,25 @@ import {
   shrinkImage,
 } from "./media";
 import { prepareVideo, VideoTooLongError } from "./video";
+import {
+  enforcePages,
+  lastUsedSpread,
+  makeSpreadFrame,
+  moveLooseContentOntoFirstSpread,
+  spreadAtX,
+  spreadId,
+  spreadRect,
+} from "./pages";
 
-const PAPER = "#fbf6ec";
+const SPREAD_KEY = "our-notebook-spread";
+const readSavedSpread = () => {
+  try {
+    return Math.max(0, Number(localStorage.getItem(SPREAD_KEY)) || 0);
+  } catch {
+    return 0;
+  }
+};
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const BROADCAST_MS = 80;
 const CURSOR_MS = 60;
 const SAVE_MS = 800;
@@ -73,6 +89,16 @@ export default function Notebook({ user }) {
   const [progress, setProgress] = useState(null); // { label, value: 0..1 | null }
   const fileInput = useRef(null);
 
+  // Which two-page spread is open (0 = pages 1–2).
+  const [spread, setSpread] = useState(0);
+  const [lastUsed, setLastUsed] = useState(-1);
+  const [peerSpreads, setPeerSpreads] = useState({}); // clientId -> { name, spread }
+  const spreadRef = useRef(0);
+  const lastUsedRef = useRef(-1);
+  const navigating = useRef(false);
+  const paperRef = useRef(null);
+  const wasEditingText = useRef(false);
+
   const clientId = useMemo(() => crypto.randomUUID(), []);
   const room = useRef(null);
   const apiRef = useRef(null);
@@ -94,16 +120,30 @@ export default function Notebook({ user }) {
 
   const initialData = useMemo(
     () =>
-      backend.loadElements().then((elements) => {
+      backend.loadElements().then((loaded) => {
         const s = sync.current;
-        for (const el of elements) {
+        for (const el of loaded) {
           s.versions.set(el.id, el.version);
           if (el.fileId) s.knownFiles.add(el.fileId);
         }
+        // Anything from before pages existed goes onto the first spread
+        // (version bumps mean it's saved + shared on the first change pass).
+        let elements = moveLooseContentOntoFirstSpread(restoreElements(loaded, null));
+        const last = lastUsedSpread(elements);
+        const have = new Set(elements.filter((e) => !e.isDeleted).map((e) => e.id));
+        const frames = [];
+        for (let n = 0; n <= last + 1; n++) {
+          if (!have.has(spreadId(n))) frames.push(makeSpreadFrame(n));
+        }
+        elements = [...frames, ...elements];
+        lastUsedRef.current = last;
         return {
-          elements: restoreElements(elements, null),
-          appState: { viewBackgroundColor: PAPER, currentItemFontFamily: 1 },
-          scrollToContent: true,
+          elements,
+          appState: {
+            viewBackgroundColor: "transparent", // the paper is drawn underneath
+            currentItemFontFamily: 1,
+            frameRendering: { enabled: true, name: false, outline: false, clip: true },
+          },
         };
       }),
     [],
@@ -137,11 +177,122 @@ export default function Notebook({ user }) {
     }
   }, []);
 
+  // ---------- pages ----------
+
+  /** Line the paper (a normal DOM layer under the transparent canvas) up with the canvas. */
+  const positionPaper = useCallback((scrollX, scrollY, zoom) => {
+    const el = paperRef.current;
+    if (!el) return;
+    const r = spreadRect(spreadRef.current);
+    el.style.setProperty("--z", zoom);
+    el.style.transform = `translate(${(r.x + scrollX) * zoom}px, ${(r.y + scrollY) * zoom}px)`;
+  }, []);
+
+  const ensureSpreadFrame = useCallback((n) => {
+    const ex = apiRef.current;
+    const all = ex.getSceneElementsIncludingDeleted();
+    if (all.some((e) => e.id === spreadId(n) && !e.isDeleted)) return;
+    ex.updateScene({
+      elements: [makeSpreadFrame(n), ...all.filter((e) => e.id !== spreadId(n))],
+      captureUpdate: CaptureUpdateAction.NEVER,
+    });
+  }, []);
+
+  const goToSpread = useCallback(
+    (n) => {
+      const ex = apiRef.current;
+      if (!ex) return;
+      n = clamp(n, 0, lastUsedRef.current + 1);
+      ensureSpreadFrame(n);
+      spreadRef.current = n;
+      setSpread(n);
+      try {
+        localStorage.setItem(SPREAD_KEY, String(n));
+      } catch {}
+      navigating.current = true;
+      const frame = ex.getSceneElements().find((e) => e.id === spreadId(n));
+      ex.scrollToContent(frame, { fitToViewport: true, viewportZoomFactor: 0.92, animate: false });
+      requestAnimationFrame(() => {
+        navigating.current = false;
+        const st = ex.getAppState();
+        positionPaper(st.scrollX, st.scrollY, st.zoom.value);
+      });
+    },
+    [ensureSpreadFrame, positionPaper],
+  );
+
+  /** Keep panning on the open spread (zooming stays unlimited). */
+  const onScrollChange = useCallback(
+    (scrollX, scrollY, zoom) => {
+      positionPaper(scrollX, scrollY, zoom.value);
+      const ex = apiRef.current;
+      if (navigating.current || !ex) return;
+      const st = ex.getAppState();
+      const z = zoom.value;
+      const r = spreadRect(spreadRef.current);
+      const cx = -scrollX + st.width / 2 / z;
+      const cy = -scrollY + st.height / 2 / z;
+      const nx = clamp(cx, r.x, r.x + r.w);
+      const ny = clamp(cy, r.y, r.y + r.h);
+      if (nx !== cx || ny !== cy) {
+        ex.updateScene({
+          appState: { scrollX: -(nx - st.width / 2 / z), scrollY: -(ny - st.height / 2 / z) },
+        });
+      }
+    },
+    [positionPaper],
+  );
+
+  /** After each drawing/drag/edit, keep everything on the paper. */
+  const enforce = useCallback(() => {
+    const ex = apiRef.current;
+    if (!ex) return;
+    const st = ex.getAppState();
+    if (
+      st.newElement ||
+      st.editingTextElement ||
+      st.resizingElement ||
+      st.multiElement ||
+      st.selectedElementsAreBeingDragged
+    ) {
+      return;
+    }
+    const all = ex.getSceneElementsIncludingDeleted();
+    const fixed = enforcePages(all, spreadRef.current);
+    if (!fixed.length) return;
+    const byId = new Map(fixed.map((e) => [e.id, e]));
+    ex.updateScene({
+      elements: all.map((e) => byId.get(e.id) || e),
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
+    });
+  }, []);
+
+  const onPointerUp = useCallback(() => setTimeout(enforce, 0), [enforce]);
+
   useEffect(() => {
     if (!api) return;
     apiRef.current = api;
-    initialData.then(({ elements }) => fetchMissingFiles(elements));
-  }, [api, initialData, fetchMissingFiles]);
+    initialData.then(({ elements }) => {
+      fetchMissingFiles(elements);
+      setLastUsed(lastUsedRef.current);
+      // Let Excalidraw finish loading the scene, then open the saved spread.
+      requestAnimationFrame(() => {
+        goToSpread(readSavedSpread());
+        enforce();
+      });
+    });
+  }, [api, initialData, fetchMissingFiles, goToSpread, enforce]);
+
+  // Keep the paper aligned when the window resizes.
+  useEffect(() => {
+    if (!api) return;
+    const onResize = () => {
+      const st = api.getAppState();
+      positionPaper(st.scrollX, st.scrollY, st.zoom.value);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [api, positionPaper]);
 
   // ---------- saving + broadcasting ----------
 
@@ -181,8 +332,13 @@ export default function Notebook({ user }) {
   }, []);
 
   const onChange = useCallback(
-    (elements, _appState, files) => {
+    (elements, appState, files) => {
       const s = sync.current;
+
+      // Finished typing a text box → make sure it sits on the page.
+      const editing = !!appState.editingTextElement;
+      if (wasEditingText.current && !editing) setTimeout(enforce, 0);
+      wasEditingText.current = editing;
 
       for (const id in files) {
         if (!s.knownFiles.has(id) && files[id].dataURL) {
@@ -194,6 +350,12 @@ export default function Notebook({ user }) {
       const sceneVersion = getSceneVersion(elements);
       if (sceneVersion === s.sceneVersion) return;
       s.sceneVersion = sceneVersion;
+
+      const last = lastUsedSpread(elements);
+      if (last !== lastUsedRef.current) {
+        lastUsedRef.current = last;
+        setLastUsed(last);
+      }
 
       let changed = false;
       for (const el of elements) {
@@ -209,7 +371,7 @@ export default function Notebook({ user }) {
       clearTimeout(s.saveTimer);
       s.saveTimer = setTimeout(flushSave, SAVE_MS);
     },
-    [flushBroadcast, flushSave, uploadImageFile],
+    [flushBroadcast, flushSave, uploadImageFile, enforce],
   );
 
   // ---------- receiving ----------
@@ -259,6 +421,15 @@ export default function Notebook({ user }) {
           selectedElementIds: c.selectedElementIds,
         });
         pushCollaborators();
+        // Track which spread the other person is on (only re-render on change).
+        if (c.pointer) {
+          const theirs = spreadAtX(c.pointer.x);
+          setPeerSpreads((prev) =>
+            prev[c.clientId]?.spread === theirs
+              ? prev
+              : { ...prev, [c.clientId]: { name: c.name, spread: theirs } },
+          );
+        }
       },
       onPeers: (peers) => {
         const next = new Map();
@@ -274,6 +445,10 @@ export default function Notebook({ user }) {
         }
         s.collaborators = next;
         pushCollaborators();
+        setPeerSpreads((prev) => {
+          const kept = Object.fromEntries(Object.entries(prev).filter(([id]) => next.has(id)));
+          return Object.keys(kept).length === Object.keys(prev).length ? prev : kept;
+        });
       },
       onReconnect: () => backend.loadElements().then(applyRemoteElements).catch(console.error),
     });
@@ -449,8 +624,9 @@ export default function Notebook({ user }) {
         },
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       });
+      setTimeout(enforce, 0);
     }
-  }, []);
+  }, [enforce]);
 
   // Intercept drops of videos/GIFs (Excalidraw would turn GIFs into still frames).
   const onDropCapture = (e) => {
@@ -537,11 +713,23 @@ export default function Notebook({ user }) {
           e.target.value = "";
         }}
       />
+      <div className="desk">
+      <div className="paper-spread" ref={paperRef} aria-hidden>
+        <div className="paper-cover" />
+        <div className="paper-page left">
+          <span className="page-no">{2 * spread + 1}</span>
+        </div>
+        <div className="paper-page right">
+          <span className="page-no">{2 * spread + 2}</span>
+        </div>
+      </div>
       <Excalidraw
         excalidrawAPI={setApi}
         initialData={initialData}
         onChange={onChange}
         onPointerUpdate={onPointerUpdate}
+        onPointerUp={onPointerUp}
+        onScrollChange={onScrollChange}
         onPaste={onPaste}
         isCollaborating
         name={NOTEBOOK_TITLE}
@@ -562,25 +750,39 @@ export default function Notebook({ user }) {
           <MainMenu.DefaultItems.SearchMenu />
           <MainMenu.DefaultItems.Help />
           <MainMenu.Separator />
-          <MainMenu.DefaultItems.ToggleTheme />
-          <MainMenu.DefaultItems.ChangeCanvasBackground />
-          <MainMenu.Separator />
           <MainMenu.Item onSelect={() => backend.signOut()}>
             Sign out ({user.name})
           </MainMenu.Item>
         </MainMenu>
-        <WelcomeScreen>
-          <WelcomeScreen.Center>
-            <WelcomeScreen.Center.Heading>
-              <span className="welcome-title">{NOTEBOOK_TITLE}</span>
-              <br />
-              The first page is blank. Write, doodle, or drop in a photo.
-            </WelcomeScreen.Center.Heading>
-          </WelcomeScreen.Center>
-          <WelcomeScreen.Hints.ToolbarHint />
-          <WelcomeScreen.Hints.MenuHint />
-        </WelcomeScreen>
       </Excalidraw>
+
+      <nav className="pager" aria-label="Turn pages">
+        <button
+          onClick={() => goToSpread(spread - 1)}
+          disabled={spread === 0}
+          aria-label="Previous pages"
+        >
+          ‹
+        </button>
+        <span className="pager-label">
+          Pages {2 * spread + 1}–{2 * spread + 2}
+        </span>
+        <button
+          onClick={() => goToSpread(spread + 1)}
+          disabled={spread >= lastUsed + 1}
+          aria-label="Next pages"
+        >
+          ›
+        </button>
+        {Object.entries(peerSpreads)
+          .filter(([, p]) => p.spread !== spread)
+          .map(([id, p]) => (
+            <button key={id} className="peer-jump" onClick={() => goToSpread(p.spread)}>
+              {p.name} is on pages {2 * p.spread + 1}–{2 * p.spread + 2} →
+            </button>
+          ))}
+      </nav>
+      </div>
     </div>
   );
 }
