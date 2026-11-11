@@ -391,3 +391,55 @@ input {
     font-size: 1rem;
   }
 }
+
+/* Video prepare / upload progress */
+.progress-pill {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(320px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #fffdf8;
+  box-shadow: 0 8px 28px rgba(60, 40, 20, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.progress-pill small {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+.progress-pill .bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--rose-soft);
+  overflow: hidden;
+}
+
+.progress-pill .bar > div {
+  height: 100%;
+  background: var(--rose);
+  border-radius: 3px;
+  transition: width 0.3s ease-out;
+}
+
+.progress-pill .bar > .indeterminate {
+  width: 35%;
+  animation: slide 1.1s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}

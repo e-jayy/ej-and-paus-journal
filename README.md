@@ -66,8 +66,14 @@ and the site redeploys automatically.
 - **Draw / write**: the Excalidraw toolbar at the top (pen, text, shapes, arrows…).
 - **Photos, GIFs, videos**: the **＋ Photo / video / GIF** button, the ☰ menu,
   drag-and-drop, or paste. Click a video once to use its play controls.
-- Files can be up to **50 MB** each. Supabase's free plan holds about **1 GB**
-  in total, so for long phone videos, trim or compress them first.
+- **iPhone videos are shrunk automatically.** Before uploading, each video is
+  converted in the browser to a 720p H.264 MP4. iPhone HEVC `.mov` files would
+  otherwise be ~60–170 MB/min, and some Windows browsers can't play them. A
+  1-minute clip ends up around 20 MB, and clips up to about 12 minutes fit
+  (longer ones get lower quality). Keep the page open while it says
+  "Preparing video".
+- Photos and GIFs can be up to **50 MB** each. Supabase's free plan holds about
+  **1 GB** in total: roughly 50 one-minute videos, or thousands of photos.
 - **Who's here**: the green dot shows you're live; the other person's cursor
   shows up with their name.
 
@@ -80,8 +86,8 @@ and the site redeploys automatically.
   resting palm won't leave marks. You can switch this off in the toolbar's
   pen-mode toggle.
 - **Photos & videos:** the 📷 button opens the Photo Library or the camera.
-  iPad photos are converted to JPEG automatically, and videos are compressed
-  by iOS before upload.
+  iPad photos are converted to JPEG automatically, and videos are shrunk
+  before upload (see below).
 
 ## Running locally
 ```bash

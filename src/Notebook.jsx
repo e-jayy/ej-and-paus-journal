@@ -23,6 +23,7 @@ import {
   measureMedia,
   shrinkImage,
 } from "./media";
+import { prepareVideo, VideoTooLongError } from "./video";
 
 const PAPER = "#fbf6ec";
 const BROADCAST_MS = 80;
@@ -69,6 +70,7 @@ export default function Notebook({ user }) {
   const [api, setApi] = useState(null);
   const [status, setStatus] = useState("connecting");
   const [busyUploads, setBusyUploads] = useState(0);
+  const [progress, setProgress] = useState(null); // { label, value: 0..1 | null }
   const fileInput = useRef(null);
 
   const clientId = useMemo(() => crypto.randomUUID(), []);
@@ -337,10 +339,13 @@ export default function Notebook({ user }) {
     let { x, y } = at || sceneCenter();
     const created = [];
 
+    const tooBig = (f) => f.size > MAX_UPLOAD_MB * 1024 * 1024;
+
     for (const file of files) {
-      if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      // Videos get shrunk first, so only photos/GIFs are checked up front.
+      if (!isVideo(file) && tooBig(file)) {
         excalidraw.setToast({
-          message: `"${file.name}" is over ${MAX_UPLOAD_MB} MB — try a shorter or compressed version.`,
+          message: `"${file.name}" is over ${MAX_UPLOAD_MB} MB — try a smaller version.`,
           closable: true,
           duration: 6000,
         });
@@ -368,10 +373,33 @@ export default function Notebook({ user }) {
             ]),
           );
         } else {
-          const size = fitSize(await measureMedia(file), isVideo(file) ? 520 : 360);
-          const path = `media/${crypto.randomUUID()}.${fileExtension(file)}`;
-          excalidraw.setToast({ message: `Uploading ${isVideo(file) ? "video" : "GIF"}…` });
-          await backend.uploadFile(path, file);
+          let upload = file;
+          let dims = null;
+          if (isVideo(file)) {
+            setProgress({ label: "Preparing video", value: 0 });
+            let prepared = null;
+            try {
+              prepared = await prepareVideo(file, (p) =>
+                setProgress({ label: "Preparing video", value: p }),
+              );
+            } catch (e) {
+              if (e instanceof VideoTooLongError) throw e;
+              console.warn("Video conversion failed, using original", e);
+            }
+            if (prepared) {
+              upload = prepared.blob;
+              dims = prepared;
+            } else if (tooBig(file)) {
+              throw new Error(
+                `it's over ${MAX_UPLOAD_MB} MB and this browser can't shrink it. Try adding it from another device.`,
+              );
+            }
+          }
+          const size = fitSize(dims || (await measureMedia(file)), isVideo(file) ? 520 : 360);
+          const ext = upload === file ? fileExtension(file) : "mp4";
+          const path = `media/${crypto.randomUUID()}.${ext}`;
+          setProgress({ label: `Uploading ${isVideo(file) ? "video" : "GIF"}`, value: null });
+          await backend.uploadFile(path, upload);
           const [base] = convertToExcalidrawElements([
             {
               type: "rectangle",
@@ -391,18 +419,22 @@ export default function Notebook({ user }) {
                   backgroundColor: "transparent",
                   strokeWidth: 0,
                   roundness: null,
-                  customData: { media: { path, mime: file.type } },
+                  customData: { media: { path, mime: upload.type || file.type } },
                 },
               ],
               null,
             ),
           );
-          excalidraw.setToast(null);
         }
       } catch (e) {
         console.error(e);
-        excalidraw.setToast({ message: `Couldn't add "${file.name}": ${e.message}`, closable: true });
+        excalidraw.setToast({
+          message: `Couldn't add "${file.name}": ${e.message}`,
+          closable: true,
+          duration: 8000,
+        });
       } finally {
+        setProgress(null);
         setBusyUploads((n) => n - 1);
       }
       x += 40;
@@ -479,6 +511,21 @@ export default function Notebook({ user }) {
 
   return (
     <div className="notebook" onDropCapture={onDropCapture}>
+      {progress && (
+        <div className="progress-pill" role="status" aria-live="polite">
+          <span>
+            {progress.label}…
+            {progress.value != null && ` ${Math.round(progress.value * 100)}%`}
+          </span>
+          <div className="bar">
+            <div
+              className={progress.value == null ? "indeterminate" : ""}
+              style={progress.value != null ? { width: `${progress.value * 100}%` } : undefined}
+            />
+          </div>
+          <small>Keep this page open until it's done</small>
+        </div>
+      )}
       <input
         ref={fileInput}
         type="file"
