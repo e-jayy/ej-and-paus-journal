@@ -510,3 +510,124 @@ input {
     animation: none;
   }
 }
+
+/* ---------- journal cover (after sign-in) ---------- */
+
+.cover-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 4vh, 32px);
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(ellipse at 50% 40%, #3a2f2b 0%, #1d1715 70%);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 0.5s ease-out 0.6s;
+}
+
+.cover-book {
+  position: relative;
+  height: min(72vh, 132vw);
+  aspect-ratio: 899 / 1400;
+  perspective: 1800px;
+  animation: cover-in 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cover-pages {
+  position: absolute;
+  inset: 1.5% 0 1.5% 1%;
+  border-radius: 2px 8px 8px 2px;
+  background: repeating-linear-gradient(to right, #fbf6ec 0 3px, #ece2cf 3px 4px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.cover-front {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px 10px 10px 3px;
+  overflow: hidden;
+  background: #111;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  box-shadow:
+    inset 6px 0 10px -6px rgba(255, 255, 255, 0.15),
+    0 24px 60px rgba(0, 0, 0, 0.55);
+  transition: transform 1s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.cover-front img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.cover-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: #121212;
+}
+
+.cover-label {
+  padding: 10px 18px;
+  background: #fbf6ec;
+  color: #222;
+  font-family: var(--hand);
+  font-size: clamp(1.4rem, 4vh, 2rem);
+}
+
+.cover-prompt {
+  margin: 0;
+  font-family: var(--hand);
+  font-size: clamp(1.4rem, 3.4vh, 2rem);
+  color: #fbf6ec;
+  text-align: center;
+  animation: prompt-pulse 2.2s ease-in-out infinite;
+}
+
+.cover-screen.opening {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cover-screen.opening .cover-front {
+  transform: rotateY(-110deg);
+}
+
+.cover-screen.opening .cover-prompt {
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+@keyframes cover-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+
+@keyframes prompt-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-book,
+  .cover-prompt {
+    animation: none;
+  }
+  .cover-front,
+  .cover-screen {
+    transition: none;
+  }
+}

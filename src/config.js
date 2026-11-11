@@ -34,6 +34,13 @@ export const PEOPLE = [
 export const anniversaryPassword = (month, day) =>
   `our-anniversary-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
+// The journal cover shown after signing in ("Press any button to open our
+// journal"). The photo lives in the private Supabase "media" bucket at this
+// path, NOT in this repo, so it stays private. Upload it in Supabase:
+// Storage → media → Upload file.
+export const COVER_IMAGE_PATH = "journal-cover.jpg";
+export const COVER_TITLE = "EJ & Pau's Journal";
+
 // Largest photo / video / GIF you can upload, in megabytes.
 // Supabase's free plan caps single files at 50 MB.
 export const MAX_UPLOAD_MB = 50;

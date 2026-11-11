@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { backend } from "./backend";
+import Cover from "./Cover";
 import Login from "./Login";
 import Notebook from "./Notebook";
 import BirthdayCard from "./BirthdayCard";
@@ -16,6 +17,8 @@ function colorFor(id, email) {
 export default function App() {
   const [user, setUser] = useState(undefined); // undefined = still checking
   const [member, setMember] = useState(null);
+  const [coverOpen, setCoverOpen] = useState(false);
+  const openCover = useCallback(() => setCoverOpen(true), []);
 
   useEffect(() => {
     backend.getUser().then(setUser);
@@ -24,6 +27,7 @@ export default function App() {
 
   useEffect(() => {
     setMember(null);
+    setCoverOpen(false);
     if (!user) return;
     backend
       .isMember()
@@ -58,10 +62,11 @@ export default function App() {
   }
 
   const me = { ...user, color: colorFor(user.id, user.email) };
+  // The notebook loads underneath the cover, so it's ready the moment it opens.
   return (
     <>
       <Notebook user={me} />
-      <BirthdayCard />
+      {coverOpen ? <BirthdayCard /> : <Cover onOpen={openCover} />}
     </>
   );
 }
