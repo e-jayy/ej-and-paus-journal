@@ -444,3 +444,69 @@ input {
     transform: translateX(300%);
   }
 }
+
+/* Anniversary sign-in */
+.anniversary {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.anniversary.shake {
+  animation: shake 0.4s ease-out;
+}
+
+.anniversary .question {
+  padding: 0;
+  font-size: 1.7rem;
+  color: var(--ink);
+}
+
+.date-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 10px;
+}
+
+.paper-card select {
+  width: 100%;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  padding: 10px 12px;
+  border: 1.5px solid #e2d8c6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.paper-card select:focus {
+  outline: none;
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px var(--rose-soft);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anniversary.shake {
+    animation: none;
+  }
+}

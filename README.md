@@ -45,21 +45,32 @@ served from the `gh-pages` branch.
 > under **Settings → Secrets and variables → Actions → Variables**, and set
 > **Settings → Pages → Source** to **GitHub Actions**.
 
-### 3. Point Supabase's emails at the site
-In Supabase, open **Authentication → URL Configuration**:
-- **Site URL**: `https://e-jayy.github.io/paula-diary-website/`
-- **Redirect URLs**: add the same address.
+### 3. Create the two accounts
+Signing in asks **"When is our anniversary?"**. Each person has their own
+date, and the date picked decides who you're signed in as. Behind the scenes,
+each person is a normal Supabase account whose password is built from their
+date. That way the dates never appear in this (public) code.
 
-That way the "confirm your email" link sends you back to the notebook.
+For each person in `PEOPLE` in [`src/config.js`](src/config.js), open Supabase
+**Authentication → Users → Add user → Create new user**:
+- **Email**: the person's `email` from `config.js` (never actually emailed)
+- **Password**: `our-anniversary-MM-DD` with their date, e.g. 3 March →
+  `our-anniversary-03-03`
+- Tick **Auto Confirm User**
 
-### 4. Create both accounts
-Open the site, choose **First time here? Create an account**, confirm the email,
-then sign in. Do this for both of you (you can make hers ahead of time, or let
-her do it).
+Then add both emails to the guest list in **SQL Editor**:
+```sql
+insert into public.members (email) values
+  ('paula@our-notebook.example.com'),
+  ('ejay@our-notebook.example.com')
+on conflict do nothing;
+```
 
-> **Tip:** once both accounts exist, you can turn off **Authentication →
-> Providers → Email → Allow new users to sign up**. It isn't required, since
-> strangers can't see anything anyway.
+> **Security note:** there are only 366 possible dates, so a determined
+> stranger could eventually guess one. Supabase slows them down. To make
+> guessing slower still, lower **Authentication → Rate Limits → sign-ups and
+> sign-ins**. Turn off **Authentication → Sign In / Providers → Allow new users
+> to sign up**, since nobody needs to sign up any more.
 
 ---
 

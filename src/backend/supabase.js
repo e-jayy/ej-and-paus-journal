@@ -1,17 +1,26 @@
 import { createClient } from "@supabase/supabase-js";
+import { PEOPLE, anniversaryPassword } from "../config";
 
 const BOARD = "main";
 const BUCKET = "media";
 const PAGE = 1000;
+
+const personFor = (email) =>
+  PEOPLE.find((p) => p.email.toLowerCase() === (email || "").toLowerCase());
 
 const toUser = (u) =>
   u
     ? {
         id: u.id,
         email: u.email,
-        name: u.user_metadata?.name || (u.email || "").split("@")[0],
+        name:
+          personFor(u.email)?.name ||
+          u.user_metadata?.name ||
+          (u.email || "").split("@")[0],
       }
     : null;
+
+export class WrongAnswerError extends Error {}
 
 /**
  * Real backend: Supabase handles login, the saved notebook (Postgres),
@@ -36,22 +45,25 @@ export function createSupabaseBackend(url, anonKey) {
       return () => data.subscription.unsubscribe();
     },
 
-    async signIn(email, password) {
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-    },
-
-    async signUp(email, password, name) {
-      const { data, error } = await sb.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name },
-          emailRedirectTo: window.location.href.split("#")[0],
-        },
-      });
-      if (error) throw error;
-      return { needsConfirmation: !data.session };
+    /**
+     * "When is our anniversary?" — the date is turned into a password and
+     * tried against each person's account; whichever one accepts it is who
+     * you are. The answers themselves never appear in the code.
+     */
+    async signInWithAnniversary(month, day) {
+      const password = anniversaryPassword(month, day);
+      for (const person of PEOPLE) {
+        const { error } = await sb.auth.signInWithPassword({
+          email: person.email,
+          password,
+        });
+        if (!error) return;
+        if (error.status === 429 || /rate limit/i.test(error.message)) {
+          throw new Error("Too many tries. Take a breath and try again in a few minutes.");
+        }
+        if (!/invalid login credentials/i.test(error.message)) throw error;
+      }
+      throw new WrongAnswerError("That's not it.");
     },
 
     async signOut() {

@@ -3,9 +3,11 @@ import { backend } from "./backend";
 import Login from "./Login";
 import Notebook from "./Notebook";
 import BirthdayCard from "./BirthdayCard";
-import { CURSOR_COLORS } from "./config";
+import { CURSOR_COLORS, PEOPLE } from "./config";
 
-function colorFor(id) {
+function colorFor(id, email) {
+  const person = PEOPLE.find((p) => p.email === email);
+  if (person) return person.color;
   let h = 0;
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return CURSOR_COLORS[h % CURSOR_COLORS.length];
@@ -55,7 +57,7 @@ export default function App() {
     );
   }
 
-  const me = { ...user, color: colorFor(user.id) };
+  const me = { ...user, color: colorFor(user.id, user.email) };
   return (
     <>
       <Notebook user={me} />
