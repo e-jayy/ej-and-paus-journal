@@ -26,22 +26,28 @@ each other, which is handy for testing.
 4. Go to **Project Settings → API** (also labelled "Data API" / "API Keys") and
    copy the **Project URL** and the **anon / publishable key**.
 
-### 2. Put it on GitHub Pages
-1. Push this folder to a GitHub repository. On a free GitHub account, Pages
-   needs the repo to be **public**. That's fine: the code contains no secrets,
-   and all the notebook content stays in Supabase behind the login.
-2. In the repo, open **Settings → Secrets and variables → Actions → Variables**
-   and add two **repository variables**:
-   - `VITE_SUPABASE_URL` = your Project URL
-   - `VITE_SUPABASE_ANON_KEY` = your anon key
-3. Go to **Settings → Pages** and set **Source** to **GitHub Actions**.
-4. Open **Actions → Deploy to GitHub Pages → Run workflow** (it also runs on
-   every push to `main`). A few minutes later the site is live at
-   `https://<your-username>.github.io/<repo-name>/`.
+### 2. Publish to GitHub Pages
+The site lives at **https://e-jayy.github.io/paula-diary-website/** and is
+served from the `gh-pages` branch.
+
+1. Copy `.env.example` to `.env.local` and paste in your Supabase Project URL
+   and anon key. `.env.local` is never committed.
+2. Run:
+   ```bash
+   npm run deploy
+   ```
+   This builds the site with your keys and publishes it. The live site updates
+   about a minute later. Run it again after any change.
+
+> The repo also has an automatic deploy (`.github/workflows/deploy.yml`) that
+> runs on every push. It only works while GitHub Actions is available on the
+> account. If you use it, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+> under **Settings → Secrets and variables → Actions → Variables**, and set
+> **Settings → Pages → Source** to **GitHub Actions**.
 
 ### 3. Point Supabase's emails at the site
 In Supabase, open **Authentication → URL Configuration**:
-- **Site URL**: `https://<your-username>.github.io/<repo-name>/`
+- **Site URL**: `https://e-jayy.github.io/paula-diary-website/`
 - **Redirect URLs**: add the same address.
 
 That way the "confirm your email" link sends you back to the notebook.
@@ -59,8 +65,8 @@ her do it).
 
 ## Personal touches
 Edit [`src/config.js`](src/config.js) to change the title, her name, and the
-birthday message that pops up the first time she opens it. Commit and push,
-and the site redeploys automatically.
+birthday message that pops up the first time she opens it. Then run
+`npm run deploy`.
 
 ## Using it
 - **Draw / write**: the Excalidraw toolbar at the top (pen, text, shapes, arrows…).
