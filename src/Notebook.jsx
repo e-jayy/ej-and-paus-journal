@@ -26,6 +26,13 @@ import {
 import { prepareVideo, VideoTooLongError } from "./video";
 import SearchPanel from "./SearchPanel";
 import {
+  NOTE_COLORS,
+  OUTLINE_COLORS,
+  photoOutline,
+  selectedPhotoId,
+  setPhotoOutline,
+} from "./outline";
+import {
   enforcePages,
   isSpreadFrame,
   lastUsedSpread,
@@ -236,6 +243,8 @@ export default function Notebook({ user }) {
     });
   const Header = viewMode ? PageHeaderView : PageHeader;
   const [searchOpen, setSearchOpen] = useState(false);
+  // The photo (image/video/GIF) currently selected, for the "Photo frame" bar.
+  const [photoSel, setPhotoSel] = useState(null); // { id, outline }
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   const fileInput = useRef(null);
 
@@ -264,6 +273,7 @@ export default function Notebook({ user }) {
     knownFiles: new Set(), // file ids already in storage
     dirty: new Set(), // ids changed on this device since the last page check
     unsaved: new Map(), // id -> element not yet confirmed saved
+    photoSelKey: "",
     framesSig: "",
     fetching: new Set(),
     collaborators: new Map(),
@@ -549,6 +559,23 @@ export default function Notebook({ user }) {
   const onChange = useCallback(
     (elements, appState, files) => {
       const s = sync.current;
+
+      // Which photo is selected (only re-render when that changes).
+      const selKey = Object.keys(appState.selectedElementIds || {}).sort().join(",");
+      const photoVersion = selKey ? elements.length + ":" + getSceneVersion(elements) : "";
+      if (selKey + "|" + photoVersion !== s.photoSelKey) {
+        s.photoSelKey = selKey + "|" + photoVersion;
+        const byId = new Map(elements.map((e) => [e.id, e]));
+        const id = selKey ? selectedPhotoId(byId, selKey.split(",")) : null;
+        const outline = id ? photoOutline(byId.get(id)) : null;
+        setPhotoSel((prev) =>
+          prev?.id === id && JSON.stringify(prev?.outline) === JSON.stringify(outline)
+            ? prev
+            : id
+              ? { id, outline }
+              : null,
+        );
+      }
 
       // Finished typing a text box → make sure it sits on the page.
       const editing = !!appState.editingTextElement;
@@ -924,6 +951,71 @@ export default function Notebook({ user }) {
     });
   };
 
+  /** Give the selected photo a frame (or remove it). */
+  const applyPhotoFrame = (style) => {
+    const ex = apiRef.current;
+    if (!ex || !photoSel) return;
+    const next = setPhotoOutline(ex.getSceneElementsIncludingDeleted(), photoSel.id, style);
+    const photo = next.find((e) => e.id === photoSel.id);
+    const selected = Object.fromEntries(
+      next
+        .filter((e) => !e.isDeleted && photo.groupIds?.length && e.groupIds?.includes(photo.groupIds[0]))
+        .map((e) => [e.id, true]),
+    );
+    selected[photoSel.id] = true;
+    ex.updateScene({
+      elements: next,
+      appState: {
+        selectedElementIds: selected,
+        selectedGroupIds: photo.groupIds?.length ? { [photo.groupIds[0]]: true } : {},
+      },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    });
+  };
+
+  const photoBar = photoSel && !viewMode && (
+    <div className="photo-bar" role="toolbar" aria-label="Photo frame">
+      <span className="photo-bar-label">Frame</span>
+      <button
+        className={`frame-none${photoSel.outline?.kind === "none" ? " active" : ""}`}
+        onClick={() => applyPhotoFrame({ kind: "none" })}
+        title="No frame"
+      >
+        None
+      </button>
+      <span className="photo-bar-group" aria-label="Colour outline">
+        <span className="photo-bar-sub">Outline</span>
+        {OUTLINE_COLORS.map((c) => (
+          <button
+            key={c.value}
+            className={`swatch${
+              photoSel.outline?.kind === "color" && photoSel.outline.color === c.value ? " active" : ""
+            }`}
+            style={{ "--swatch": c.value }}
+            onClick={() => applyPhotoFrame({ kind: "color", color: c.value })}
+            title={`${c.name} outline`}
+            aria-label={`${c.name} outline`}
+          />
+        ))}
+      </span>
+      <span className="photo-bar-group" aria-label="Sticky note">
+        <span className="photo-bar-sub">Sticky note</span>
+        {NOTE_COLORS.map((c) => (
+          <button
+            key={c.value}
+            className={`swatch note${
+              photoSel.outline?.kind === "note" && photoSel.outline.color === c.value ? " active" : ""
+            }`}
+            style={{ "--swatch": c.value }}
+            onClick={() => applyPhotoFrame({ kind: "note", color: c.value })}
+            title={`${c.name} sticky note`}
+            aria-label={`${c.name} sticky note`}
+          />
+        ))}
+      </span>
+    </div>
+  );
+
   // ---------- UI ----------
 
   const connectionLabel = {
@@ -1054,6 +1146,7 @@ export default function Notebook({ user }) {
         ))}
       </div>
 
+      {photoBar}
       {searchOpen && (
         <SearchPanel frames={frames} numbers={numbers} onGo={goToSpread} onClose={closeSearch} />
       )}

@@ -1069,3 +1069,93 @@ input {
     bottom: calc(128px + env(safe-area-inset-bottom));
   }
 }
+
+/* ---------- photo frame bar ---------- */
+
+.photo-bar {
+  position: absolute;
+  z-index: 5;
+  top: calc(64px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 24px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 253, 248, 0.97);
+  box-shadow: 0 4px 18px rgba(60, 40, 20, 0.16);
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.photo-bar-label {
+  font-family: var(--hand);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.photo-bar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.photo-bar-sub {
+  margin-right: 2px;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.photo-bar button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.photo-bar .frame-none {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border: 1.5px solid #e2d8c6;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink-soft);
+}
+
+.photo-bar .frame-none.active {
+  border-color: var(--rose);
+  color: var(--rose);
+}
+
+.photo-bar .swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  background: var(--swatch);
+}
+
+.photo-bar .swatch.note {
+  border-radius: 3px;
+  box-shadow: 1px 2px 0 rgba(60, 40, 20, 0.18);
+}
+
+.photo-bar .swatch.active {
+  outline: 2.5px solid var(--rose);
+  outline-offset: 2px;
+}
+
+@media (max-width: 599px) {
+  .photo-bar {
+    top: calc(60px + env(safe-area-inset-top));
+    gap: 6px 8px;
+  }
+  .photo-bar .swatch {
+    width: 26px;
+    height: 26px;
+  }
+}
