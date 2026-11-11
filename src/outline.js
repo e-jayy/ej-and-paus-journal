@@ -56,6 +56,51 @@ function part(photo, { dx, dy, w, h, tilt = 0 }, props) {
   };
 }
 
+export const DEFAULT_OUTLINE_WIDTH = 6;
+export const MIN_OUTLINE_WIDTH = 1;
+export const MAX_OUTLINE_WIDTH = 40;
+
+/** The outline: an unfilled rectangle whose line hugs the outside of the photo. */
+function borderPart(photo, style) {
+  const w = style.width ?? DEFAULT_OUTLINE_WIDTH;
+  return part(
+    photo,
+    { dx: 0, dy: 0, w: photo.width + w, h: photo.height + w },
+    {
+      backgroundColor: "transparent",
+      strokeColor: style.color,
+      strokeWidth: w,
+    },
+  );
+}
+
+/**
+ * Change just the outline's width (used while dragging the slider), keeping
+ * the same border shape instead of rebuilding it.
+ */
+export function setOutlineWidth(elements, photoId, width) {
+  const photo = elements.find((e) => e.id === photoId);
+  const style = photoOutline(photo);
+  if (!photo || style.kind !== "color") return elements;
+  const nextStyle = { ...style, width };
+  const fresh = borderPart(photo, nextStyle);
+  return elements.map((e) => {
+    if (e.id === photoId) {
+      return newElementWith(e, { customData: { ...(e.customData || {}), outline: nextStyle } });
+    }
+    if (outlineOf(e) === photoId && !e.isDeleted && e.customData?.role === "border") {
+      return newElementWith(e, {
+        x: fresh.x,
+        y: fresh.y,
+        width: fresh.width,
+        height: fresh.height,
+        strokeWidth: width,
+      });
+    }
+    return e;
+  });
+}
+
 /**
  * Change a photo's frame. Returns the full new element list:
  * old frame pieces removed, new ones added (behind the photo, tape on top).
@@ -94,17 +139,8 @@ export function setPhotoOutline(elements, photoId, style) {
   const behind = [];
   const onTop = [];
   if (style.kind === "color") {
-    const pad = Math.max(6, short * 0.035);
-    behind.push(
-      mark(
-        part(
-          photo,
-          { dx: 0, dy: 0, w: photo.width + pad * 2, h: photo.height + pad * 2 },
-          { backgroundColor: style.color, strokeColor: style.color },
-        ),
-        "border",
-      ),
-    );
+    // Just a line around the photo's edge (no fill), sitting right outside it.
+    onTop.push(mark(borderPart(photo, style), "border"));
   } else {
     // Sticky note: more paper at the bottom, like a note or a polaroid.
     const side = Math.max(10, short * 0.07);

@@ -26,10 +26,14 @@ import {
 import { prepareVideo, VideoTooLongError } from "./video";
 import SearchPanel from "./SearchPanel";
 import {
+  DEFAULT_OUTLINE_WIDTH,
+  MAX_OUTLINE_WIDTH,
+  MIN_OUTLINE_WIDTH,
   NOTE_COLORS,
   OUTLINE_COLORS,
   photoOutline,
   selectedPhotoId,
+  setOutlineWidth,
   setPhotoOutline,
 } from "./outline";
 import {
@@ -973,6 +977,16 @@ export default function Notebook({ user }) {
     });
   };
 
+  /** Slider: resize the outline in place (no new shapes per step). */
+  const changeOutlineWidth = (width) => {
+    const ex = apiRef.current;
+    if (!ex || !photoSel) return;
+    ex.updateScene({
+      elements: setOutlineWidth(ex.getSceneElementsIncludingDeleted(), photoSel.id, width),
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
+    });
+  };
+
   const photoBar = photoSel && !viewMode && (
     <div className="photo-bar" role="toolbar" aria-label="Photo frame">
       <span className="photo-bar-label">Frame</span>
@@ -992,12 +1006,35 @@ export default function Notebook({ user }) {
               photoSel.outline?.kind === "color" && photoSel.outline.color === c.value ? " active" : ""
             }`}
             style={{ "--swatch": c.value }}
-            onClick={() => applyPhotoFrame({ kind: "color", color: c.value })}
+            onClick={() =>
+              applyPhotoFrame({
+                kind: "color",
+                color: c.value,
+                width: photoSel.outline?.width ?? DEFAULT_OUTLINE_WIDTH,
+              })
+            }
             title={`${c.name} outline`}
             aria-label={`${c.name} outline`}
           />
         ))}
       </span>
+      {photoSel.outline?.kind === "color" && (
+        <label className="photo-bar-group outline-width">
+          <span className="photo-bar-sub">Width</span>
+          <input
+            type="range"
+            min={MIN_OUTLINE_WIDTH}
+            max={MAX_OUTLINE_WIDTH}
+            step={1}
+            value={photoSel.outline.width ?? DEFAULT_OUTLINE_WIDTH}
+            onChange={(e) => changeOutlineWidth(Number(e.target.value))}
+            aria-label="Outline width in pixels"
+          />
+          <span className="outline-width-value">
+            {photoSel.outline.width ?? DEFAULT_OUTLINE_WIDTH}px
+          </span>
+        </label>
+      )}
       <span className="photo-bar-group" aria-label="Sticky note">
         <span className="photo-bar-sub">Sticky note</span>
         {NOTE_COLORS.map((c) => (

@@ -92,7 +92,8 @@ birthday message that pops up the first time she opens it. Then run
   nothing can be changed by accident; you can still flip, zoom and play
   videos. Tap **✏️ Edit** to go back. Each device remembers which mode it's in.
 - **Photo frames**: select a photo (or video/GIF) and a **Frame** bar appears
-  at the top: **None**, a coloured **Outline**, or a **Sticky note** (pastel
+  at the top: **None**, a coloured **Outline** (just a line around the photo's
+  edge; drag **Width** to set its thickness in pixels), or a **Sticky note** (pastel
   paper with a shadow and a strip of tape). The frame is attached to the
   photo, so it moves, resizes and deletes with it.
 - **Search by date**: tap **🔍** next to the page-turner. Pick a day to see

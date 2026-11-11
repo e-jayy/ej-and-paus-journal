@@ -1159,3 +1159,16 @@ input {
     height: 26px;
   }
 }
+
+.photo-bar .outline-width input[type="range"] {
+  width: 110px;
+  accent-color: var(--rose);
+  cursor: pointer;
+}
+
+.photo-bar .outline-width-value {
+  min-width: 2.6em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
