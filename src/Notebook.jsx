@@ -33,6 +33,7 @@ import {
   OUTLINE_COLORS,
   photoOutline,
   selectedPhotoId,
+  refitOutlines,
   setOutlineWidth,
   setPhotoOutline,
 } from "./outline";
@@ -462,10 +463,13 @@ export default function Notebook({ user }) {
     const all = ex.getSceneElementsIncludingDeleted();
     const s = sync.current;
     if (!s.dirty.size) return;
-    const fixed = enforcePages(all, spreadRef.current, s.dirty);
+    const dirty = new Set(s.dirty);
     s.dirty.clear();
-    if (!fixed.length) return;
-    const byId = new Map(fixed.map((e) => [e.id, e]));
+    const byId = new Map(enforcePages(all, spreadRef.current, dirty).map((e) => [e.id, e]));
+    // Keep photo outlines hugging their photo after a move/resize/rotate.
+    const merged = all.map((e) => byId.get(e.id) || e);
+    for (const e of refitOutlines(merged, dirty)) byId.set(e.id, e);
+    if (!byId.size) return;
     ex.updateScene({
       elements: all.map((e) => byId.get(e.id) || e),
       captureUpdate: CaptureUpdateAction.EVENTUALLY,

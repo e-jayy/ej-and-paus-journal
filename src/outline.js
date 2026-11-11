@@ -60,12 +60,17 @@ export const DEFAULT_OUTLINE_WIDTH = 6;
 export const MIN_OUTLINE_WIDTH = 1;
 export const MAX_OUTLINE_WIDTH = 40;
 
+// The line overlaps the photo's edge by this much, so no hairline of paper
+// can show between them at any zoom level.
+const OVERLAP = 1;
+
 /** The outline: an unfilled rectangle whose line hugs the outside of the photo. */
 function borderPart(photo, style) {
   const w = style.width ?? DEFAULT_OUTLINE_WIDTH;
+  const o = Math.min(OVERLAP, w / 2);
   return part(
     photo,
-    { dx: 0, dy: 0, w: photo.width + w, h: photo.height + w },
+    { dx: 0, dy: 0, w: photo.width + w - o * 2, h: photo.height + w - o * 2 },
     {
       backgroundColor: "transparent",
       strokeColor: style.color,
@@ -201,4 +206,54 @@ export function selectedPhotoId(elementsById, selectedIds) {
     else return null; // something else is selected too
   }
   return photos.size === 1 ? [...photos][0] : null;
+}
+
+/**
+ * After a photo is moved, resized or rotated, snap its outline back so it
+ * hugs the photo at the chosen width (resizing a group scales the gap but
+ * not the line, which would otherwise leave a gap). Only touches photos in
+ * `changedIds` (or whose outline is in it). Returns the changed elements.
+ */
+export function refitOutlines(elements, changedIds) {
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  const photoIds = new Set();
+  for (const id of changedIds) {
+    const el = byId.get(id);
+    if (!el) continue;
+    if (isPhoto(el)) photoIds.add(el.id);
+    else if (outlineOf(el)) photoIds.add(outlineOf(el));
+  }
+  const changed = [];
+  for (const pid of photoIds) {
+    const photo = byId.get(pid);
+    if (!photo || photo.isDeleted) continue;
+    const style = photoOutline(photo);
+    if (style.kind !== "color") continue;
+    const border = elements.find(
+      (e) => !e.isDeleted && outlineOf(e) === pid && e.customData?.role === "border",
+    );
+    if (!border) continue;
+    const fresh = borderPart(photo, style);
+    const off = (a, b) => Math.abs(a - b) > 0.01;
+    if (
+      off(border.x, fresh.x) ||
+      off(border.y, fresh.y) ||
+      off(border.width, fresh.width) ||
+      off(border.height, fresh.height) ||
+      off(border.angle || 0, fresh.angle || 0) ||
+      border.strokeWidth !== fresh.strokeWidth
+    ) {
+      changed.push(
+        newElementWith(border, {
+          x: fresh.x,
+          y: fresh.y,
+          width: fresh.width,
+          height: fresh.height,
+          angle: fresh.angle,
+          strokeWidth: fresh.strokeWidth,
+        }),
+      );
+    }
+  }
+  return changed;
 }
