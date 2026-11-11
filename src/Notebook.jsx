@@ -455,7 +455,7 @@ export default function Notebook({ user }) {
     <div className="top-right">
       <span className={`status status-${status}`} title={statusLabel}>
         <i />
-        {!isMobile && statusLabel}
+        {!isMobile && <span className="label">{statusLabel}</span>}
       </span>
       {/* On phones the toolbar is full, so this lives in the ☰ menu instead. */}
       {!isMobile && (
@@ -463,9 +463,15 @@ export default function Notebook({ user }) {
           className="add-media"
           onClick={() => fileInput.current?.click()}
           title="Add photos, GIFs or videos"
+          aria-label="Add photos, GIFs or videos"
           disabled={busyUploads > 0}
         >
-          {busyUploads > 0 ? "Uploading…" : "＋ Photo / video / GIF"}
+          <span className="icon" aria-hidden>
+            {busyUploads > 0 ? "…" : "📷"}
+          </span>
+          <span className="label">
+            {busyUploads > 0 ? "Uploading…" : "Photo / video / GIF"}
+          </span>
         </button>
       )}
     </div>

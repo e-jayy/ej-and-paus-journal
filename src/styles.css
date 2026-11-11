@@ -23,6 +23,23 @@ body,
   background: var(--paper);
   color: var(--ink);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iPad/iPhone: no rubber-band page bounce, and size to the *visible* screen
+   (100dvh shrinks/grows with Safari's toolbars instead of hiding under them). */
+html,
+body {
+  overscroll-behavior: none;
+}
+
+#root {
+  height: 100dvh;
+}
+
+button,
+input {
+  touch-action: manipulation;
 }
 
 .handwritten {
@@ -170,6 +187,12 @@ body,
 .notebook {
   height: 100%;
   width: 100%;
+  /* Keep toolbars clear of the iPad's rounded corners / home indicator
+     when it's opened from the Home Screen. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* No "Save image / Copy" pop-up when holding a finger or Pencil down. */
+  -webkit-touch-callout: none;
 }
 
 .top-right {
@@ -347,5 +370,24 @@ body,
   }
   .confetti {
     display: none;
+  }
+}
+
+/* Media button: icon + label on wide screens, icon only on tablets in portrait. */
+.add-media {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 1100px) {
+  .top-right .label {
+    display: none;
+  }
+  .add-media {
+    width: 2.25rem;
+    padding: 0;
+    justify-content: center;
+    font-size: 1rem;
   }
 }

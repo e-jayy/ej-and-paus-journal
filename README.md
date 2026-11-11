@@ -71,6 +71,18 @@ and the site redeploys automatically.
 - **Who's here**: the green dot shows you're live; the other person's cursor
   shows up with their name.
 
+## On an iPad
+- **Make it an app:** open the site in Safari, tap **Share → Add to Home
+  Screen**. It gets a notebook icon and opens full-screen, without Safari's
+  address bar.
+- **Apple Pencil:** the first time the Pencil touches the page, the notebook
+  switches to pen mode. The Pencil draws, fingers scroll and pinch-zoom, and a
+  resting palm won't leave marks. You can switch this off in the toolbar's
+  pen-mode toggle.
+- **Photos & videos:** the 📷 button opens the Photo Library or the camera.
+  iPad photos are converted to JPEG automatically, and videos are compressed
+  by iOS before upload.
+
 ## Running locally
 ```bash
 npm install
