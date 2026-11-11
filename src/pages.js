@@ -55,40 +55,75 @@ export function makeSpreadFrame(n) {
   );
   return frame;
 }
-/** Highest spread that has anything on it (-1 if the notebook is empty). */
+/** A spread's per-page titles/dates, kept on its frame: { L: {title, date}, R: {...} }. */
+export const pagesMeta = (frame) => frame?.customData?.pages || {};
+
+/** Copy of a spread frame with one page's title/date changed. */
+export function withPageMeta(frame, side, patch) {
+  const pages = pagesMeta(frame);
+  return newElementWith(frame, {
+    customData: {
+      ...(frame.customData || {}),
+      pages: { ...pages, [side]: { ...(pages[side] || {}), ...patch } },
+    },
+  });
+}
+
+const hasMeta = (frame) =>
+  Object.values(pagesMeta(frame)).some((p) => p && (p.title || p.date));
+
+/** Highest spread that has anything on it, or a title/date (-1 if none). */
 export function lastUsedSpread(elements) {
   let last = -1;
   for (const el of elements) {
-    if (el.isDeleted || el.type === "frame") continue;
-    const n = spreadOf(el);
+    if (el.isDeleted) continue;
+    const n = el.type === "frame" ? (isSpreadFrame(el) && hasMeta(el) ? Number(el.id.slice(7)) : null) : spreadOf(el);
     if (n != null && n > last) last = n;
   }
   return last;
 }
 
-// These must sit fully on the paper (they're not clipped, or shouldn't be cut).
-const MUST_FIT = new Set(["image", "embeddable", "iframe", "text"]);
-
-const shift = (a1, a2, b1, b2) => {
-  if (a2 - a1 >= b2 - b1) return b1 - a1;
-  if (a1 < b1) return b1 - a1;
-  if (a2 > b2) return b2 - a2;
-  return 0;
-};
+/**
+ * Number the pages by date. Dated pages come first, oldest first; undated
+ * pages follow in the order they sit in the notebook. Spreads are then
+ * visited in order of their lowest page number.
+ * Returns { numbers: Map("n-L" -> page number), order: [spread indexes] }.
+ */
+export function orderPages(frames, spreadCount) {
+  const byN = new Map(frames.map((f) => [Number(f.id.slice(7)), f]));
+  const pages = [];
+  for (let n = 0; n < spreadCount; n++) {
+    const meta = pagesMeta(byN.get(n));
+    for (const side of ["L", "R"]) pages.push({ n, side, date: meta[side]?.date || "" });
+  }
+  pages.sort((a, b) => {
+    if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1;
+    if (!!a.date !== !!b.date) return a.date ? -1 : 1;
+    return a.n - b.n || (a.side === "L" ? -1 : 1);
+  });
+  const numbers = new Map(pages.map((p, i) => [`${p.n}-${p.side}`, i + 1]));
+  const order = [...new Set(pages.map((p) => p.n))].sort(
+    (a, b) =>
+      Math.min(numbers.get(`${a}-L`), numbers.get(`${a}-R`)) -
+      Math.min(numbers.get(`${b}-L`), numbers.get(`${b}-R`)),
+  );
+  return { numbers, order };
+}
 
 /**
- * Keep everything on the pages. Returns the elements that needed changing:
- * - each thing is attached to its spread (so it's clipped at the edges),
- * - photos, videos and text are nudged fully onto the paper,
- * - anything that ended up completely off the paper is moved back on.
- * Groups and text-inside-shapes move together.
+ * Keep everything on the pages, without moving anything:
+ * - each thing is attached to its spread, so whatever hangs over the paper's
+ *   edge is simply hidden there (it still exists, and shows again if moved back),
+ * - anything that ends up entirely off the paper is deleted.
+ * Only the given (locally changed) elements are checked, so we never touch
+ * something the other person is still in the middle of dragging.
+ * Groups and text-inside-shapes are treated as one piece.
  */
-export function enforcePages(elements, currentSpread) {
+export function enforcePages(elements, currentSpread, onlyIds) {
   const live = elements.filter(
     (el) => !el.isDeleted && el.type !== "frame" && el.type !== "magicframe",
   );
 
-  // Units that must move together: groups, and shapes with their label text.
   const units = new Map();
   for (const el of live) {
     const key = el.containerId
@@ -102,6 +137,7 @@ export function enforcePages(elements, currentSpread) {
 
   const changed = [];
   for (const unit of units.values()) {
+    if (onlyIds && !unit.some((el) => onlyIds.has(el.id))) continue;
     const [x1, y1, x2, y2] = getCommonBounds(unit);
     let n = unit.map(spreadOf).find((s) => s != null);
     if (n == null) {
@@ -112,18 +148,10 @@ export function enforcePages(elements, currentSpread) {
     }
     const r = spreadRect(n);
     const overlaps = x2 > r.x && x1 < r.x + r.w && y2 > r.y && y1 < r.y + r.h;
-    const mustFit = unit.some((el) => MUST_FIT.has(el.type));
-    let dx = 0;
-    let dy = 0;
-    if (mustFit || !overlaps) {
-      dx = shift(x1, x2, r.x, r.x + r.w);
-      dy = shift(y1, y2, r.y, r.y + r.h);
-    }
     const frameId = spreadId(n);
     for (const el of unit) {
-      if (dx || dy || el.frameId !== frameId) {
-        changed.push(newElementWith(el, { x: el.x + dx, y: el.y + dy, frameId }));
-      }
+      if (!overlaps) changed.push(newElementWith(el, { isDeleted: true }));
+      else if (el.frameId !== frameId) changed.push(newElementWith(el, { frameId }));
     }
   }
   return changed;

@@ -779,3 +779,87 @@ input {
     display: none;
   }
 }
+
+/* ---------- page title + date (sits over the top margin of each page) ---------- */
+
+.page-headers {
+  --z: 1;
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: calc(1400px * var(--z));
+  height: calc(92px * var(--z));
+  transform-origin: 0 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.page-header {
+  position: relative;
+  width: 50%;
+  height: 100%;
+  padding: calc(14px * var(--z)) calc(48px * var(--z)) 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(2px * var(--z));
+}
+
+.page-header input,
+.page-header label {
+  pointer-events: auto;
+}
+
+.page-date {
+  position: relative;
+  align-self: flex-end;
+  font-family: var(--hand);
+  font-size: calc(22px * var(--z));
+  line-height: 1.2;
+  color: #8a7f74;
+  cursor: pointer;
+}
+
+.page-date.empty {
+  color: #c4bbb0;
+}
+
+.page-date:hover {
+  color: var(--rose);
+}
+
+/* The real date input sits invisibly on top, so tapping opens the picker. */
+.page-date input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+
+.page-title {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  border-bottom: max(1px, calc(1.5px * var(--z))) dashed transparent;
+  background: transparent;
+  padding: 0;
+  font-family: var(--hand);
+  font-size: calc(42px * var(--z));
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.page-title::placeholder {
+  color: #d8d0c4;
+}
+
+.page-title:hover,
+.page-title:focus {
+  outline: none;
+  border-bottom-color: #e5d9c6;
+}

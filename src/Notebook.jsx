@@ -25,7 +25,12 @@ import {
 import { prepareVideo, VideoTooLongError } from "./video";
 import {
   enforcePages,
+  isSpreadFrame,
   lastUsedSpread,
+  orderPages,
+  pagesMeta,
+  spreadOf,
+  withPageMeta,
   makeSpreadFrame,
   moveLooseContentOntoFirstSpread,
   spreadAtX,
@@ -42,6 +47,18 @@ const readSavedSpread = () => {
   }
 };
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+/** Videos/GIFs are HTML on top of the canvas, so hide the part past the paper with CSS. */
+function paperClip(el) {
+  const n = spreadOf(el) ?? spreadAtX(el.x + el.width / 2);
+  const r = spreadRect(n);
+  const top = Math.max(0, r.y - el.y);
+  const left = Math.max(0, r.x - el.x);
+  const right = Math.max(0, el.x + el.width - (r.x + r.w));
+  const bottom = Math.max(0, el.y + el.height - (r.y + r.h));
+  if (!top && !left && !right && !bottom) return undefined;
+  return { clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px)` };
+}
 const BROADCAST_MS = 80;
 const CURSOR_MS = 60;
 const SAVE_MS = 800;
@@ -52,7 +69,7 @@ const MEDIA_MARK = "#media/";
 const mediaLink = (path) =>
   `${window.location.origin}${window.location.pathname}${MEDIA_MARK}${path}`;
 
-function MediaEmbed({ media }) {
+function MediaEmbed({ media, clip }) {
   const [src, setSrc] = useState(null);
   const [failed, setFailed] = useState(false);
 
@@ -77,9 +94,70 @@ function MediaEmbed({ media }) {
   if (failed) return <div className="media-placeholder">Couldn't load this one</div>;
   if (!src) return <div className="media-placeholder">Loading…</div>;
   if (media.mime.startsWith("video/")) {
-    return <video className="media-fill" src={src} controls playsInline loop preload="metadata" />;
+    return (
+      <video className="media-fill" style={clip} src={src} controls playsInline loop preload="metadata" />
+    );
   }
-  return <img className="media-fill" src={src} alt="" draggable={false} />;
+  return <img className="media-fill" style={clip} src={src} alt="" draggable={false} />;
+}
+
+const formatDate = (iso) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+/** The title + date written at the top of one page. */
+function PageHeader({ side, meta, onCommit }) {
+  const [title, setTitle] = useState(meta.title || "");
+  const focused = useRef(false);
+  const timer = useRef(null);
+
+  // Show the other person's edits, unless you're typing in it right now.
+  useEffect(() => {
+    if (!focused.current) setTitle(meta.title || "");
+  }, [meta.title]);
+
+  const commitTitle = (v) => {
+    clearTimeout(timer.current);
+    if (v !== (meta.title || "")) onCommit({ title: v });
+  };
+
+  return (
+    <div className={`page-header ${side}`}>
+      <label className={`page-date${meta.date ? "" : " empty"}`}>
+        <span>{meta.date ? formatDate(meta.date) : "Add a date"}</span>
+        <input
+          type="date"
+          value={meta.date || ""}
+          onChange={(e) => onCommit({ date: e.target.value })}
+          aria-label={`${side === "L" ? "Left" : "Right"} page date`}
+        />
+      </label>
+      <input
+        className="page-title"
+        value={title}
+        placeholder="Title"
+        maxLength={80}
+        aria-label={`${side === "L" ? "Left" : "Right"} page title`}
+        onFocus={() => (focused.current = true)}
+        onBlur={(e) => {
+          focused.current = false;
+          commitTitle(e.target.value);
+        }}
+        onChange={(e) => {
+          const v = e.target.value;
+          setTitle(v);
+          clearTimeout(timer.current);
+          timer.current = setTimeout(() => commitTitle(v), 500);
+        }}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      />
+    </div>
+  );
 }
 
 export default function Notebook({ user }) {
@@ -93,6 +171,8 @@ export default function Notebook({ user }) {
   const [spread, setSpread] = useState(0);
   const [lastUsed, setLastUsed] = useState(-1);
   const [peerSpreads, setPeerSpreads] = useState({}); // clientId -> { name, spread }
+  const [frames, setFrames] = useState([]); // spread frames (hold page titles/dates)
+  const headersRef = useRef(null);
   const spreadRef = useRef(0);
   const lastUsedRef = useRef(-1);
   const navigating = useRef(false);
@@ -110,6 +190,8 @@ export default function Notebook({ user }) {
     broadcastTimer: null,
     saveTimer: null,
     knownFiles: new Set(), // file ids already in storage
+    dirty: new Set(), // ids changed on this device since the last page check
+    framesSig: "",
     fetching: new Set(),
     collaborators: new Map(),
     lastCursor: 0,
@@ -184,8 +266,12 @@ export default function Notebook({ user }) {
     const el = paperRef.current;
     if (!el) return;
     const r = spreadRect(spreadRef.current);
-    el.style.setProperty("--z", zoom);
-    el.style.transform = `translate(${(r.x + scrollX) * zoom}px, ${(r.y + scrollY) * zoom}px)`;
+    const t = `translate(${(r.x + scrollX) * zoom}px, ${(r.y + scrollY) * zoom}px)`;
+    for (const layer of [el, headersRef.current]) {
+      if (!layer) continue;
+      layer.style.setProperty("--z", zoom);
+      layer.style.transform = t;
+    }
   }, []);
 
   const ensureSpreadFrame = useCallback((n) => {
@@ -219,6 +305,23 @@ export default function Notebook({ user }) {
       });
     },
     [ensureSpreadFrame, positionPaper],
+  );
+
+  /** Save a page's title/date onto its spread frame (synced like everything else). */
+  const updatePageMeta = useCallback(
+    (n, side, patch) => {
+      const ex = apiRef.current;
+      if (!ex) return;
+      ensureSpreadFrame(n);
+      const all = ex.getSceneElementsIncludingDeleted();
+      const frame = all.find((e) => e.id === spreadId(n));
+      const updated = withPageMeta(frame, side, patch);
+      ex.updateScene({
+        elements: all.map((e) => (e.id === updated.id ? updated : e)),
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      });
+    },
+    [ensureSpreadFrame],
   );
 
   /** Keep panning on the open spread (zooming stays unlimited). */
@@ -258,7 +361,10 @@ export default function Notebook({ user }) {
       return;
     }
     const all = ex.getSceneElementsIncludingDeleted();
-    const fixed = enforcePages(all, spreadRef.current);
+    const s = sync.current;
+    if (!s.dirty.size) return;
+    const fixed = enforcePages(all, spreadRef.current, s.dirty);
+    s.dirty.clear();
     if (!fixed.length) return;
     const byId = new Map(fixed.map((e) => [e.id, e]));
     ex.updateScene({
@@ -331,6 +437,22 @@ export default function Notebook({ user }) {
     }
   }, []);
 
+  /** Re-read page titles/dates and how far the notebook is used. */
+  const refreshPageState = useCallback((elements) => {
+    const s = sync.current;
+    const frames = elements.filter((e) => !e.isDeleted && isSpreadFrame(e));
+    const sig = frames.map((f) => f.id + ":" + f.version).join(",");
+    if (sig !== s.framesSig) {
+      s.framesSig = sig;
+      setFrames(frames);
+    }
+    const last = lastUsedSpread(elements);
+    if (last !== lastUsedRef.current) {
+      lastUsedRef.current = last;
+      setLastUsed(last);
+    }
+  }, []);
+
   const onChange = useCallback(
     (elements, appState, files) => {
       const s = sync.current;
@@ -351,11 +473,7 @@ export default function Notebook({ user }) {
       if (sceneVersion === s.sceneVersion) return;
       s.sceneVersion = sceneVersion;
 
-      const last = lastUsedSpread(elements);
-      if (last !== lastUsedRef.current) {
-        lastUsedRef.current = last;
-        setLastUsed(last);
-      }
+      refreshPageState(elements);
 
       let changed = false;
       for (const el of elements) {
@@ -363,6 +481,7 @@ export default function Notebook({ user }) {
           s.versions.set(el.id, el.version);
           s.toBroadcast.set(el.id, el);
           s.toSave.set(el.id, el);
+          s.dirty.add(el.id);
           changed = true;
         }
       }
@@ -371,7 +490,7 @@ export default function Notebook({ user }) {
       clearTimeout(s.saveTimer);
       s.saveTimer = setTimeout(flushSave, SAVE_MS);
     },
-    [flushBroadcast, flushSave, uploadImageFile, enforce],
+    [flushBroadcast, flushSave, uploadImageFile, enforce, refreshPageState],
   );
 
   // ---------- receiving ----------
@@ -387,14 +506,16 @@ export default function Notebook({ user }) {
         excalidraw.getAppState(),
       );
       for (const el of reconciled) s.versions.set(el.id, el.version);
+      for (const el of remote) s.dirty.delete(el.id);
       s.sceneVersion = getSceneVersion(reconciled);
       excalidraw.updateScene({
         elements: reconciled,
         captureUpdate: CaptureUpdateAction.NEVER,
       });
+      refreshPageState(reconciled);
       fetchMissingFiles(remote);
     },
-    [fetchMissingFiles],
+    [fetchMissingFiles, refreshPageState],
   );
 
   const pushCollaborators = () =>
@@ -650,6 +771,23 @@ export default function Notebook({ user }) {
     return true;
   };
 
+  // ---------- page numbers (by date) ----------
+
+  const { numbers, order } = useMemo(
+    () => orderPages(frames, Math.max(lastUsed + 2, spread + 1)),
+    [frames, lastUsed, spread],
+  );
+  const pagesLabel = (n) => {
+    const a = numbers.get(`${n}-L`);
+    const b = numbers.get(`${n}-R`);
+    const [lo, hi] = a < b ? [a, b] : [b, a];
+    return hi === lo + 1 ? `${lo}–${hi}` : `${lo} & ${hi}`;
+  };
+  const orderPos = order.indexOf(spread);
+  const prevSpread = orderPos > 0 ? order[orderPos - 1] : null;
+  const nextSpread = orderPos >= 0 && orderPos < order.length - 1 ? order[orderPos + 1] : null;
+  const currentMeta = pagesMeta(frames.find((f) => f.id === spreadId(spread)));
+
   // ---------- UI ----------
 
   const statusLabel = {
@@ -717,10 +855,10 @@ export default function Notebook({ user }) {
       <div className="paper-spread" ref={paperRef} aria-hidden>
         <div className="paper-cover" />
         <div className="paper-page left">
-          <span className="page-no">{2 * spread + 1}</span>
+          <span className="page-no">{numbers.get(`${spread}-L`)}</span>
         </div>
         <div className="paper-page right">
-          <span className="page-no">{2 * spread + 2}</span>
+          <span className="page-no">{numbers.get(`${spread}-R`)}</span>
         </div>
       </div>
       <Excalidraw
@@ -736,7 +874,9 @@ export default function Notebook({ user }) {
         renderTopRightUI={renderTopRightUI}
         validateEmbeddable={(link) => (link.includes(MEDIA_MARK) ? true : undefined)}
         renderEmbeddable={(el) =>
-          el.customData?.media ? <MediaEmbed media={el.customData.media} /> : null
+          el.customData?.media ? (
+            <MediaEmbed media={el.customData.media} clip={paperClip(el)} />
+          ) : null
         }
         UIOptions={{
           canvasActions: { loadScene: false, saveToActiveFile: false, clearCanvas: false },
@@ -756,20 +896,31 @@ export default function Notebook({ user }) {
         </MainMenu>
       </Excalidraw>
 
+      <div className="page-headers" ref={headersRef}>
+        {["L", "R"].map((side) => (
+          <PageHeader
+            key={`${spread}-${side}`}
+            side={side}
+            meta={currentMeta[side] || {}}
+            onCommit={(patch) => updatePageMeta(spread, side, patch)}
+          />
+        ))}
+      </div>
+
       <nav className="pager" aria-label="Turn pages">
         <button
-          onClick={() => goToSpread(spread - 1)}
-          disabled={spread === 0}
+          onClick={() => goToSpread(prevSpread)}
+          disabled={prevSpread == null}
           aria-label="Previous pages"
         >
           ‹
         </button>
         <span className="pager-label">
-          Pages {2 * spread + 1}–{2 * spread + 2}
+          Pages {pagesLabel(spread)}
         </span>
         <button
-          onClick={() => goToSpread(spread + 1)}
-          disabled={spread >= lastUsed + 1}
+          onClick={() => goToSpread(nextSpread)}
+          disabled={nextSpread == null}
           aria-label="Next pages"
         >
           ›
@@ -778,7 +929,7 @@ export default function Notebook({ user }) {
           .filter(([, p]) => p.spread !== spread)
           .map(([id, p]) => (
             <button key={id} className="peer-jump" onClick={() => goToSpread(p.spread)}>
-              {p.name} is on pages {2 * p.spread + 1}–{2 * p.spread + 2} →
+              {p.name} is on pages {pagesLabel(p.spread)} →
             </button>
           ))}
       </nav>

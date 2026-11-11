@@ -82,9 +82,16 @@ birthday message that pops up the first time she opens it. Then run
 ## Using it
 - **Pages**: the notebook is a series of two-page spreads. Use **‹ ›** at the
   bottom to turn pages; there's always one blank spread waiting at the end.
-  Anything that runs off the paper is clipped at the edge, and photos, videos
-  and text are kept fully on the page. Zoom in as far as you like. If the other
-  person is on a different spread, a "… is on pages 5–6 →" button takes you there.
+  Anything that runs past the paper is hidden beyond the edge, but it still
+  exists and shows again if you move it back. Anything moved **entirely** off
+  the paper is deleted (Ctrl/Cmd+Z brings it back). Zoom in as far as you like.
+  If the other person is on a different spread, a "… is on pages 5–6 →" button
+  takes you there.
+- **Titles and dates**: each page has a title line and a date in its top
+  margin. Click to type a title, or tap the date to pick one.
+- **Page numbers follow the dates**: pages are numbered oldest first, with
+  undated pages after them, and ‹ › flips through spreads in that order. If a
+  spread's two pages have far-apart dates, it may read "Pages 2 & 5".
 - **Draw / write**: the Excalidraw toolbar at the top (pen, text, shapes, arrows…).
 - **Photos, GIFs, videos**: the **＋ Photo / video / GIF** button, the ☰ menu,
   drag-and-drop, or paste. Click a video once to use its play controls.
