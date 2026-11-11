@@ -91,6 +91,10 @@ birthday message that pops up the first time she opens it. Then run
   toolbar and editing controls disappear, empty titles/dates are hidden, and
   nothing can be changed by accident; you can still flip, zoom and play
   videos. Tap **✏️ Edit** to go back. Each device remembers which mode it's in.
+- **Search by date**: tap **🔍** next to the page-turner. Pick a day to see
+  the pages from that date (title + page number), or tick **Whole month**. With
+  no date picked it lists every dated page, oldest first. Tap a result to jump
+  there.
 - **Titles and dates**: each page has a title line and a date in its top
   margin. Click to type a title, or tap the date to pick one.
 - **Page numbers follow the dates**: pages are numbered oldest first, with

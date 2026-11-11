@@ -24,6 +24,7 @@ import {
   shrinkImage,
 } from "./media";
 import { prepareVideo, VideoTooLongError } from "./video";
+import SearchPanel from "./SearchPanel";
 import {
   enforcePages,
   isSpreadFrame,
@@ -234,6 +235,8 @@ export default function Notebook({ user }) {
       return !v;
     });
   const Header = viewMode ? PageHeaderView : PageHeader;
+  const [searchOpen, setSearchOpen] = useState(false);
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
   const fileInput = useRef(null);
 
   // Which two-page spread is open (0 = pages 1–2).
@@ -1051,6 +1054,10 @@ export default function Notebook({ user }) {
         ))}
       </div>
 
+      {searchOpen && (
+        <SearchPanel frames={frames} numbers={numbers} onGo={goToSpread} onClose={closeSearch} />
+      )}
+
       <nav className="pager" aria-label="Turn pages">
         <button
           className={`mode-toggle${viewMode ? " viewing" : ""}`}
@@ -1059,6 +1066,15 @@ export default function Notebook({ user }) {
           title={viewMode ? "Switch to editing" : "Switch to view only"}
         >
           {viewMode ? "✏️ Edit" : "👁 View"}
+        </button>
+        <button
+          className={`search-toggle${searchOpen ? " open" : ""}`}
+          onClick={() => setSearchOpen((o) => !o)}
+          aria-expanded={searchOpen}
+          aria-label="Search pages by date"
+          title="Search pages by date"
+        >
+          🔍
         </button>
         <button
           onClick={() => goToSpread(prevSpread)}
