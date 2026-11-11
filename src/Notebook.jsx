@@ -25,6 +25,7 @@ import {
 } from "./media";
 import { prepareVideo, VideoTooLongError } from "./video";
 import SearchPanel from "./SearchPanel";
+import { PageHeader, PageHeaderView } from "./PageHeader";
 import {
   DEFAULT_OUTLINE_WIDTH,
   MAX_OUTLINE_WIDTH,
@@ -145,84 +146,6 @@ function MediaEmbed({ media, clip }) {
     );
   }
   return <img className="media-fill" style={clip} src={src} alt="" draggable={false} />;
-}
-
-const formatDate = (iso) => {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-};
-
-/** The title + date written at the top of one page. */
-/** View mode: the title and date as plain handwriting (nothing if empty). */
-function PageHeaderView({ side, meta }) {
-  return (
-    <div className={`page-header ${side} read-only`}>
-      <span className="page-date">{meta.date ? formatDate(meta.date) : ""}</span>
-      <span className="page-title">{meta.title || ""}</span>
-    </div>
-  );
-}
-
-function PageHeader({ side, meta, onCommit }) {
-  const [title, setTitle] = useState(meta.title || "");
-  const focused = useRef(false);
-  const timer = useRef(null);
-
-  // Show the other person's edits, unless you're typing in it right now.
-  useEffect(() => {
-    if (!focused.current) setTitle(meta.title || "");
-  }, [meta.title]);
-
-  const commitTitle = (v) => {
-    clearTimeout(timer.current);
-    if (v !== (meta.title || "")) onCommit({ title: v });
-  };
-
-  return (
-    <div className={`page-header ${side}`}>
-      <label className={`page-date${meta.date ? "" : " empty"}`}>
-        <span>{meta.date ? formatDate(meta.date) : "Add a date"}</span>
-        <input
-          type="date"
-          value={meta.date || ""}
-          // Desktop browsers only open the calendar from its small icon, so
-          // open it ourselves on any click (phones/tablets do this anyway).
-          onClick={(e) => {
-            try {
-              e.currentTarget.showPicker();
-            } catch {
-              e.currentTarget.focus();
-            }
-          }}
-          onChange={(e) => onCommit({ date: e.target.value })}
-          aria-label={`${side === "L" ? "Left" : "Right"} page date`}
-        />
-      </label>
-      <input
-        className="page-title"
-        value={title}
-        placeholder="Title"
-        maxLength={80}
-        aria-label={`${side === "L" ? "Left" : "Right"} page title`}
-        onFocus={() => (focused.current = true)}
-        onBlur={(e) => {
-          focused.current = false;
-          commitTitle(e.target.value);
-        }}
-        onChange={(e) => {
-          const v = e.target.value;
-          setTitle(v);
-          clearTimeout(timer.current);
-          timer.current = setTimeout(() => commitTitle(v), 500);
-        }}
-        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-      />
-    </div>
-  );
 }
 
 export default function Notebook({ user }) {

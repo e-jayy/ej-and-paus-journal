@@ -780,7 +780,7 @@ input {
   }
 }
 
-/* ---------- page title + date (sits over the top margin of each page) ---------- */
+/* ---------- page title + date (on top of each page) ---------- */
 
 .page-headers {
   --z: 1;
@@ -789,39 +789,40 @@ input {
   top: 0;
   left: 0;
   width: calc(1400px * var(--z));
-  height: calc(92px * var(--z));
+  height: calc(1090px * var(--z));
   transform-origin: 0 0;
-  display: flex;
   pointer-events: none;
 }
 
 .page-header {
-  position: relative;
+  position: absolute;
+  top: 0;
   width: 50%;
   height: 100%;
-  padding: calc(14px * var(--z)) calc(48px * var(--z)) 0;
-  display: flex;
-  flex-direction: column;
-  gap: calc(2px * var(--z));
 }
 
-.page-header input,
-.page-header label {
-  pointer-events: auto;
+.page-header.L {
+  left: 0;
+}
+
+.page-header.R {
+  left: 50%;
 }
 
 .page-date {
-  position: relative;
-  align-self: flex-end;
-  /* Bigger tap/click area than the text itself. */
-  padding: calc(6px * var(--z)) calc(10px * var(--z));
-  margin: calc(-6px * var(--z)) calc(-10px * var(--z));
-  border-radius: calc(8px * var(--z));
+  position: absolute;
+  top: calc(14px * var(--z));
+  right: calc(48px * var(--z));
   font-family: var(--hand);
   font-size: calc(22px * var(--z));
   line-height: 1.2;
   color: #8a7f74;
+  pointer-events: auto;
   cursor: pointer;
+  /* Bigger tap/click area than the text itself. */
+  padding: calc(6px * var(--z)) calc(10px * var(--z));
+  margin: calc(-6px * var(--z)) calc(-10px * var(--z));
+  border-radius: calc(8px * var(--z));
 }
 
 .page-date.empty {
@@ -845,49 +846,159 @@ input {
   padding: 0;
 }
 
+/* Title: centred on (--tx, --ty), and as wide as its text. */
+.title-wrap {
+  position: absolute;
+  left: calc(var(--tx) * 100%);
+  top: calc(var(--ty) * var(--z) * 1px);
+  transform: translate(-50%, -50%);
+  max-width: calc(100% - 60px * var(--z));
+  display: inline-grid;
+  pointer-events: auto;
+}
+
+/* Invisible copy of the text that sets the input's width. */
+.title-wrap.editable::after {
+  content: attr(data-value) " ";
+  visibility: hidden;
+  white-space: pre;
+  overflow: hidden;
+}
+
+.title-wrap.editable::after,
+.title-wrap .page-title {
+  grid-area: 1 / 1;
+  font-family: var(--title-font);
+  font-size: calc(var(--title-size) * var(--z) * 1px);
+  font-weight: var(--title-weight);
+  line-height: 1.2;
+  padding: 0 calc(4px * var(--z));
+}
+
 .page-title {
   width: 100%;
-  min-width: 0;
+  min-width: 1ch;
   border: none;
   border-bottom: max(1px, calc(1.5px * var(--z))) dashed transparent;
   background: transparent;
-  padding: 0;
-  font-family: var(--hand);
-  font-size: calc(42px * var(--z));
-  font-weight: 700;
-  line-height: 1.15;
+  margin: 0;
+  text-align: center;
   color: var(--ink);
+  text-overflow: ellipsis;
 }
 
 .page-title::placeholder {
   color: #d8d0c4;
 }
 
-.page-title:hover,
+.title-wrap.editable:hover .page-title,
 .page-title:focus {
   outline: none;
   border-bottom-color: #e5d9c6;
 }
 
-/* ---------- view mode ---------- */
+.page-header.read-only .page-title {
+  white-space: nowrap;
+  overflow: hidden;
+  border: none;
+}
 
 .page-header.read-only,
 .page-header.read-only * {
   pointer-events: none;
 }
 
-.page-header.read-only .page-date {
-  min-height: calc(26px * var(--z));
-  padding: 0;
-  margin: 0;
+/* Little bar above the title: drag grip, font, reset. */
+.title-tools {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  background: #fffdf8;
+  box-shadow: 0 2px 10px rgba(60, 40, 20, 0.18);
+  white-space: nowrap;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
 }
 
-.page-header.read-only .page-title {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.title-wrap.editable:hover .title-tools,
+.title-wrap.editable:focus-within .title-tools,
+.page-header.dragging .title-tools {
+  display: flex;
 }
+
+.title-grip {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: var(--rose-soft);
+  color: var(--rose);
+  font-size: 16px;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+.page-header.dragging .title-grip {
+  cursor: grabbing;
+}
+
+.title-tools select {
+  height: 28px;
+  border: 1px solid #e2d8c6;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  padding: 0 6px;
+  cursor: pointer;
+}
+
+.title-reset {
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.title-reset:hover {
+  background: var(--rose-soft);
+  color: var(--rose);
+}
+
+/* Guide lines shown while a dragged title is snapped. */
+.snap-guide {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(214, 51, 108, 0.45);
+}
+
+.snap-guide.vertical {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.snap-guide.horizontal {
+  left: 0;
+  right: 0;
+  top: calc(var(--ty) * var(--z) * 1px);
+  height: 1px;
+}
+
+/* ---------- view mode ---------- */
 
 .pager .mode-toggle {
   font-size: 0.85rem;

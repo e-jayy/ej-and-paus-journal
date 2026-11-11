@@ -100,8 +100,12 @@ birthday message that pops up the first time she opens it. Then run
   the pages from that date (title + page number), or tick **Whole month**. With
   no date picked it lists every dated page, oldest first. Tap a result to jump
   there.
-- **Titles and dates**: each page has a title line and a date in its top
-  margin. Click to type a title, or tap the date to pick one.
+- **Titles and dates**: each page has a title (centred at the top) and a date
+  in its top-right corner. Click to type a title, or tap the date to pick one.
+  While editing a title, a small bar appears above it: pick a **font**
+  (Handwriting, Marker, Serif, Typewriter, Rounded), or drag the **⠿** grip to
+  move the title anywhere on the page. It snaps to the centre line and its
+  usual height when close; **Centre** puts it back.
 - **Page numbers follow the dates**: pages are numbered oldest first, with
   undated pages after them, and ‹ › flips through spreads in that order. If a
   spread's two pages have far-apart dates, it may read "Pages 2 & 5".
