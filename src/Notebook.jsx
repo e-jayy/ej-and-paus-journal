@@ -1,0 +1,533 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  CaptureUpdateAction,
+  Excalidraw,
+  MainMenu,
+  WelcomeScreen,
+  convertToExcalidrawElements,
+  getSceneVersion,
+  reconcileElements,
+  restoreElements,
+  viewportCoordsToSceneCoords,
+} from "@excalidraw/excalidraw";
+import { backend } from "./backend";
+import { MAX_UPLOAD_MB, NOTEBOOK_TITLE } from "./config";
+import {
+  blobToDataURL,
+  dataURLToBlob,
+  fileExtension,
+  fitSize,
+  isGif,
+  isStillImage,
+  isVideo,
+  measureMedia,
+  shrinkImage,
+} from "./media";
+
+const PAPER = "#fbf6ec";
+const BROADCAST_MS = 80;
+const CURSOR_MS = 60;
+const SAVE_MS = 800;
+
+// Videos and GIFs live on the page as "embeddable" elements whose link points
+// back here; renderEmbeddable swaps the iframe for a real <video>/<img>.
+const MEDIA_MARK = "#media/";
+const mediaLink = (path) =>
+  `${window.location.origin}${window.location.pathname}${MEDIA_MARK}${path}`;
+
+function MediaEmbed({ media }) {
+  const [src, setSrc] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    let tries = 0;
+    const load = () =>
+      backend
+        .getMediaUrl(media.path)
+        .then((url) => alive && setSrc(url))
+        .catch(() => {
+          // The other person may still be uploading it — try again shortly.
+          if (alive && ++tries < 20) setTimeout(load, 1500);
+          else if (alive) setFailed(true);
+        });
+    load();
+    return () => {
+      alive = false;
+    };
+  }, [media.path]);
+
+  if (failed) return <div className="media-placeholder">Couldn't load this one</div>;
+  if (!src) return <div className="media-placeholder">Loading…</div>;
+  if (media.mime.startsWith("video/")) {
+    return <video className="media-fill" src={src} controls playsInline loop preload="metadata" />;
+  }
+  return <img className="media-fill" src={src} alt="" draggable={false} />;
+}
+
+export default function Notebook({ user }) {
+  const [api, setApi] = useState(null);
+  const [status, setStatus] = useState("connecting");
+  const [busyUploads, setBusyUploads] = useState(0);
+  const fileInput = useRef(null);
+
+  const clientId = useMemo(() => crypto.randomUUID(), []);
+  const room = useRef(null);
+  const apiRef = useRef(null);
+  const sync = useRef({
+    versions: new Map(), // element id -> last version we've seen/sent
+    sceneVersion: -1,
+    toBroadcast: new Map(),
+    toSave: new Map(),
+    broadcastTimer: null,
+    saveTimer: null,
+    knownFiles: new Set(), // file ids already in storage
+    fetching: new Set(),
+    collaborators: new Map(),
+    lastCursor: 0,
+    cursorTimer: null,
+  });
+
+  // ---------- loading ----------
+
+  const initialData = useMemo(
+    () =>
+      backend.loadElements().then((elements) => {
+        const s = sync.current;
+        for (const el of elements) {
+          s.versions.set(el.id, el.version);
+          if (el.fileId) s.knownFiles.add(el.fileId);
+        }
+        return {
+          elements: restoreElements(elements, null),
+          appState: { viewBackgroundColor: PAPER, currentItemFontFamily: 1 },
+          scrollToContent: true,
+        };
+      }),
+    [],
+  );
+
+  const fetchMissingFiles = useCallback(async (elements) => {
+    const excalidraw = apiRef.current;
+    if (!excalidraw) return;
+    const s = sync.current;
+    const have = excalidraw.getFiles();
+    for (const el of elements) {
+      if (el.type !== "image" || !el.fileId || el.isDeleted) continue;
+      if (have[el.fileId] || s.fetching.has(el.fileId)) continue;
+      s.fetching.add(el.fileId);
+      (async () => {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          try {
+            const blob = await backend.downloadFile(`files/${el.fileId}`);
+            const dataURL = await blobToDataURL(blob);
+            s.knownFiles.add(el.fileId);
+            excalidraw.addFiles([
+              { id: el.fileId, dataURL, mimeType: blob.type || "image/png", created: Date.now() },
+            ]);
+            break;
+          } catch {
+            await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          }
+        }
+        s.fetching.delete(el.fileId);
+      })();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!api) return;
+    apiRef.current = api;
+    initialData.then(({ elements }) => fetchMissingFiles(elements));
+  }, [api, initialData, fetchMissingFiles]);
+
+  // ---------- saving + broadcasting ----------
+
+  const flushSave = useCallback(async () => {
+    const s = sync.current;
+    clearTimeout(s.saveTimer);
+    s.saveTimer = null;
+    if (!s.toSave.size) return;
+    const batch = [...s.toSave.values()];
+    s.toSave.clear();
+    try {
+      await backend.saveElements(batch);
+    } catch (e) {
+      console.error("Save failed, will retry", e);
+      for (const el of batch) if (!s.toSave.has(el.id)) s.toSave.set(el.id, el);
+      s.saveTimer = setTimeout(flushSave, 3000);
+    }
+  }, []);
+
+  const flushBroadcast = useCallback(() => {
+    const s = sync.current;
+    s.broadcastTimer = null;
+    if (!s.toBroadcast.size || !room.current) return;
+    room.current.sendElements([...s.toBroadcast.values()]);
+    s.toBroadcast.clear();
+  }, []);
+
+  const uploadImageFile = useCallback(async (file) => {
+    try {
+      const blob = await dataURLToBlob(file.dataURL);
+      await backend.uploadFile(`files/${file.id}`, blob);
+    } catch (e) {
+      console.error(e);
+      sync.current.knownFiles.delete(file.id);
+      apiRef.current?.setToast({ message: "A photo didn't upload — try adding it again.", closable: true });
+    }
+  }, []);
+
+  const onChange = useCallback(
+    (elements, _appState, files) => {
+      const s = sync.current;
+
+      for (const id in files) {
+        if (!s.knownFiles.has(id) && files[id].dataURL) {
+          s.knownFiles.add(id);
+          uploadImageFile(files[id]);
+        }
+      }
+
+      const sceneVersion = getSceneVersion(elements);
+      if (sceneVersion === s.sceneVersion) return;
+      s.sceneVersion = sceneVersion;
+
+      let changed = false;
+      for (const el of elements) {
+        if (s.versions.get(el.id) !== el.version) {
+          s.versions.set(el.id, el.version);
+          s.toBroadcast.set(el.id, el);
+          s.toSave.set(el.id, el);
+          changed = true;
+        }
+      }
+      if (!changed) return;
+      if (!s.broadcastTimer) s.broadcastTimer = setTimeout(flushBroadcast, BROADCAST_MS);
+      clearTimeout(s.saveTimer);
+      s.saveTimer = setTimeout(flushSave, SAVE_MS);
+    },
+    [flushBroadcast, flushSave, uploadImageFile],
+  );
+
+  // ---------- receiving ----------
+
+  const applyRemoteElements = useCallback(
+    (remote) => {
+      const excalidraw = apiRef.current;
+      if (!excalidraw || !remote?.length) return;
+      const s = sync.current;
+      const reconciled = reconcileElements(
+        excalidraw.getSceneElementsIncludingDeleted(),
+        restoreElements(remote, null),
+        excalidraw.getAppState(),
+      );
+      for (const el of reconciled) s.versions.set(el.id, el.version);
+      s.sceneVersion = getSceneVersion(reconciled);
+      excalidraw.updateScene({
+        elements: reconciled,
+        captureUpdate: CaptureUpdateAction.NEVER,
+      });
+      fetchMissingFiles(remote);
+    },
+    [fetchMissingFiles],
+  );
+
+  const pushCollaborators = () =>
+    apiRef.current?.updateScene({ collaborators: new Map(sync.current.collaborators) });
+
+  useEffect(() => {
+    if (!api) return;
+    const s = sync.current;
+    const r = backend.joinRoom({
+      clientId,
+      user,
+      onStatus: setStatus,
+      onElements: applyRemoteElements,
+      onCursor: (c) => {
+        const prev = s.collaborators.get(c.clientId) || {};
+        s.collaborators.set(c.clientId, {
+          ...prev,
+          id: c.clientId,
+          socketId: c.clientId,
+          username: c.name,
+          color: c.color,
+          pointer: c.pointer,
+          button: c.button,
+          selectedElementIds: c.selectedElementIds,
+        });
+        pushCollaborators();
+      },
+      onPeers: (peers) => {
+        const next = new Map();
+        for (const p of peers) {
+          const prev = s.collaborators.get(p.clientId) || {};
+          next.set(p.clientId, {
+            ...prev,
+            id: p.clientId,
+            socketId: p.clientId,
+            username: p.name,
+            color: p.color,
+          });
+        }
+        s.collaborators = next;
+        pushCollaborators();
+      },
+      onReconnect: () => backend.loadElements().then(applyRemoteElements).catch(console.error),
+    });
+    room.current = r;
+
+    const flushOnHide = () => {
+      if (document.visibilityState === "hidden") flushSave();
+    };
+    document.addEventListener("visibilitychange", flushOnHide);
+    window.addEventListener("beforeunload", flushSave);
+
+    return () => {
+      flushSave();
+      r.leave();
+      room.current = null;
+      document.removeEventListener("visibilitychange", flushOnHide);
+      window.removeEventListener("beforeunload", flushSave);
+    };
+  }, [api, clientId, user, applyRemoteElements, flushSave]);
+
+  const onPointerUpdate = useCallback(
+    ({ pointer, button }) => {
+      const s = sync.current;
+      const send = () => {
+        s.cursorTimer = null;
+        s.lastCursor = Date.now();
+        room.current?.sendCursor({
+          clientId,
+          name: user.name,
+          color: user.color,
+          pointer: s.pendingPointer.pointer,
+          button: s.pendingPointer.button,
+          selectedElementIds: apiRef.current?.getAppState().selectedElementIds,
+        });
+      };
+      s.pendingPointer = { pointer, button };
+      if (s.cursorTimer) return;
+      const wait = CURSOR_MS - (Date.now() - s.lastCursor);
+      if (wait <= 0) send();
+      else s.cursorTimer = setTimeout(send, wait);
+    },
+    [clientId, user],
+  );
+
+  // ---------- adding photos, GIFs and videos ----------
+
+  const sceneCenter = () => {
+    const st = apiRef.current.getAppState();
+    return viewportCoordsToSceneCoords(
+      { clientX: st.offsetLeft + st.width / 2, clientY: st.offsetTop + st.height / 2 },
+      st,
+    );
+  };
+
+  const insertFiles = useCallback(async (fileList, at) => {
+    const excalidraw = apiRef.current;
+    if (!excalidraw) return;
+    const files = [...fileList].filter((f) => isVideo(f) || f.type.startsWith("image/"));
+    if (!files.length) {
+      excalidraw.setToast({ message: "That file type can't go in the notebook.", closable: true });
+      return;
+    }
+    let { x, y } = at || sceneCenter();
+    const created = [];
+
+    for (const file of files) {
+      if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+        excalidraw.setToast({
+          message: `"${file.name}" is over ${MAX_UPLOAD_MB} MB — try a shorter or compressed version.`,
+          closable: true,
+          duration: 6000,
+        });
+        continue;
+      }
+      setBusyUploads((n) => n + 1);
+      try {
+        if (isStillImage(file)) {
+          const img = await shrinkImage(file);
+          const fileId = crypto.randomUUID();
+          const size = fitSize(img, 420);
+          excalidraw.addFiles([
+            { id: fileId, dataURL: img.dataURL, mimeType: img.mimeType, created: Date.now() },
+          ]);
+          created.push(
+            ...convertToExcalidrawElements([
+              {
+                type: "image",
+                fileId,
+                status: "saved",
+                x: x - size.width / 2,
+                y: y - size.height / 2,
+                ...size,
+              },
+            ]),
+          );
+        } else {
+          const size = fitSize(await measureMedia(file), isVideo(file) ? 520 : 360);
+          const path = `media/${crypto.randomUUID()}.${fileExtension(file)}`;
+          excalidraw.setToast({ message: `Uploading ${isVideo(file) ? "video" : "GIF"}…` });
+          await backend.uploadFile(path, file);
+          const [base] = convertToExcalidrawElements([
+            {
+              type: "rectangle",
+              x: x - size.width / 2,
+              y: y - size.height / 2,
+              ...size,
+            },
+          ]);
+          created.push(
+            ...restoreElements(
+              [
+                {
+                  ...base,
+                  type: "embeddable",
+                  link: mediaLink(path),
+                  strokeColor: "transparent",
+                  backgroundColor: "transparent",
+                  strokeWidth: 0,
+                  roundness: null,
+                  customData: { media: { path, mime: file.type } },
+                },
+              ],
+              null,
+            ),
+          );
+          excalidraw.setToast(null);
+        }
+      } catch (e) {
+        console.error(e);
+        excalidraw.setToast({ message: `Couldn't add "${file.name}": ${e.message}`, closable: true });
+      } finally {
+        setBusyUploads((n) => n - 1);
+      }
+      x += 40;
+      y += 40;
+    }
+
+    if (created.length) {
+      excalidraw.updateScene({
+        elements: [...excalidraw.getSceneElementsIncludingDeleted(), ...created],
+        appState: {
+          selectedElementIds: Object.fromEntries(created.map((el) => [el.id, true])),
+        },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      });
+    }
+  }, []);
+
+  // Intercept drops of videos/GIFs (Excalidraw would turn GIFs into still frames).
+  const onDropCapture = (e) => {
+    const files = [...(e.dataTransfer?.files || [])];
+    if (!files.some((f) => isVideo(f) || isGif(f))) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const at = viewportCoordsToSceneCoords(
+      { clientX: e.clientX, clientY: e.clientY },
+      apiRef.current.getAppState(),
+    );
+    insertFiles(files, at);
+  };
+
+  const onPaste = (_data, event) => {
+    const files = [...(event?.clipboardData?.files || [])];
+    if (files.some((f) => isVideo(f) || isGif(f))) {
+      insertFiles(files);
+      return false;
+    }
+    return true;
+  };
+
+  // ---------- UI ----------
+
+  const statusLabel = {
+    connecting: "Connecting…",
+    live: backend.mode === "demo" ? "Demo · live" : "Live",
+    reconnecting: "Reconnecting…",
+    offline: "Offline",
+  }[status];
+
+  const renderTopRightUI = (isMobile) => (
+    <div className="top-right">
+      <span className={`status status-${status}`} title={statusLabel}>
+        <i />
+        {!isMobile && statusLabel}
+      </span>
+      {/* On phones the toolbar is full, so this lives in the ☰ menu instead. */}
+      {!isMobile && (
+        <button
+          className="add-media"
+          onClick={() => fileInput.current?.click()}
+          title="Add photos, GIFs or videos"
+          disabled={busyUploads > 0}
+        >
+          {busyUploads > 0 ? "Uploading…" : "＋ Photo / video / GIF"}
+        </button>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="notebook" onDropCapture={onDropCapture}>
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        hidden
+        onChange={(e) => {
+          insertFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      <Excalidraw
+        excalidrawAPI={setApi}
+        initialData={initialData}
+        onChange={onChange}
+        onPointerUpdate={onPointerUpdate}
+        onPaste={onPaste}
+        isCollaborating
+        name={NOTEBOOK_TITLE}
+        renderTopRightUI={renderTopRightUI}
+        validateEmbeddable={(link) => (link.includes(MEDIA_MARK) ? true : undefined)}
+        renderEmbeddable={(el) =>
+          el.customData?.media ? <MediaEmbed media={el.customData.media} /> : null
+        }
+        UIOptions={{
+          canvasActions: { loadScene: false, saveToActiveFile: false, clearCanvas: false },
+        }}
+      >
+        <MainMenu>
+          <MainMenu.Item onSelect={() => fileInput.current?.click()}>
+            Add photo / video / GIF
+          </MainMenu.Item>
+          <MainMenu.DefaultItems.SaveAsImage />
+          <MainMenu.DefaultItems.SearchMenu />
+          <MainMenu.DefaultItems.Help />
+          <MainMenu.Separator />
+          <MainMenu.DefaultItems.ToggleTheme />
+          <MainMenu.DefaultItems.ChangeCanvasBackground />
+          <MainMenu.Separator />
+          <MainMenu.Item onSelect={() => backend.signOut()}>
+            Sign out ({user.name})
+          </MainMenu.Item>
+        </MainMenu>
+        <WelcomeScreen>
+          <WelcomeScreen.Center>
+            <WelcomeScreen.Center.Heading>
+              <span className="welcome-title">{NOTEBOOK_TITLE}</span>
+              <br />
+              The first page is blank. Write, doodle, or drop in a photo.
+            </WelcomeScreen.Center.Heading>
+          </WelcomeScreen.Center>
+          <WelcomeScreen.Hints.ToolbarHint />
+          <WelcomeScreen.Hints.MenuHint />
+        </WelcomeScreen>
+      </Excalidraw>
+    </div>
+  );
+}

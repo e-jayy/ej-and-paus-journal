@@ -1,0 +1,351 @@
+:root {
+  --paper: #fbf6ec;
+  --paper-deep: #f3ead8;
+  --ink: #2b2522;
+  --ink-soft: #6b5f57;
+  --rose: #d6336c;
+  --rose-soft: #ffe3ec;
+  --tape: rgba(255, 214, 165, 0.75);
+  --line: rgba(120, 150, 200, 0.18);
+  --serif: "Fraunces", Georgia, serif;
+  --hand: "Caveat", "Segoe Print", cursive;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.handwritten {
+  font-family: var(--hand);
+  font-size: 1.5rem;
+  color: var(--ink-soft);
+}
+
+.splash {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-family: var(--hand);
+  font-size: 1.8rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- login / paper screens ---------- */
+
+.paper-screen {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 31px,
+    var(--line) 31px 32px
+  );
+}
+
+.paper-card {
+  position: relative;
+  width: min(380px, 100%);
+  padding: 40px 28px 28px;
+  background: #fffdf8;
+  border-radius: 4px;
+  box-shadow:
+    0 1px 2px rgba(60, 40, 20, 0.08),
+    0 12px 32px rgba(60, 40, 20, 0.12);
+  transform: rotate(-0.6deg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.paper-card h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.paper-card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.tape {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 110px;
+  height: 26px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: var(--tape);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.paper-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.paper-card input {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  padding: 10px 12px;
+  border: 1.5px solid #e2d8c6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.paper-card input:focus {
+  outline: none;
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px var(--rose-soft);
+}
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--rose);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: #c2255c;
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.link-btn {
+  font: inherit;
+  font-size: 0.9rem;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.msg {
+  font-size: 0.9rem;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.msg.error {
+  background: #fff0f0;
+  color: #c92a2a;
+}
+
+.msg.info {
+  background: #ebfbee;
+  color: #2b8a3e;
+}
+
+/* ---------- notebook ---------- */
+
+.notebook {
+  height: 100%;
+  width: 100%;
+}
+
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--color-gray-70, #555);
+  white-space: nowrap;
+}
+
+.status i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #adb5bd;
+}
+
+.status-live i {
+  background: #40c057;
+  box-shadow: 0 0 0 3px rgba(64, 192, 87, 0.2);
+}
+
+.status-reconnecting i,
+.status-connecting i {
+  background: #fab005;
+}
+
+.status-offline i {
+  background: #fa5252;
+}
+
+.add-media {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  height: 2.25rem;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--rose-soft);
+  color: var(--rose);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.add-media:hover:not(:disabled) {
+  background: #ffd0de;
+}
+
+.add-media:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.media-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--embeddable-radius, 0);
+  background: transparent;
+}
+
+.media-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-family: var(--hand);
+  font-size: 1.3rem;
+  color: var(--ink-soft);
+  background: var(--paper-deep);
+  border-radius: 6px;
+}
+
+.welcome-title {
+  font-family: var(--hand);
+  font-size: 2.6rem;
+  color: var(--rose);
+}
+
+/* ---------- birthday card ---------- */
+
+.birthday-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(43, 37, 34, 0.45);
+  animation: fade-in 0.4s ease;
+}
+
+.birthday-card {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 44px 32px 30px;
+  background: #fffdf8;
+  border-radius: 6px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+  animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.birthday-card h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.birthday-card .big {
+  font-size: 3.2rem;
+  color: var(--rose);
+}
+
+.birthday-card p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.birthday-card .signature {
+  text-align: right;
+  font-size: 1.7rem;
+}
+
+.confetti span {
+  position: absolute;
+  top: -12px;
+  left: var(--x);
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  background: hsl(calc(var(--i) * 47), 85%, 70%);
+  animation: fall calc(2.6s + var(--i) * 0.13s) linear var(--d) infinite;
+  pointer-events: none;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(560px) rotate(540deg);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.94) rotate(-2deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti span,
+  .birthday-card,
+  .birthday-backdrop {
+    animation: none;
+  }
+  .confetti {
+    display: none;
+  }
+}
