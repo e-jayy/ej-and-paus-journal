@@ -868,3 +868,40 @@ input {
   outline: none;
   border-bottom-color: #e5d9c6;
 }
+
+/* ---------- view mode ---------- */
+
+.page-header.read-only,
+.page-header.read-only * {
+  pointer-events: none;
+}
+
+.page-header.read-only .page-date {
+  min-height: calc(26px * var(--z));
+  padding: 0;
+  margin: 0;
+}
+
+.page-header.read-only .page-title {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pager .mode-toggle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0 10px;
+  margin-right: 4px;
+  color: var(--ink-soft);
+  border-right: 1px solid #eee4d6;
+  border-radius: 8px 0 0 8px;
+}
+
+.pager .mode-toggle.viewing {
+  color: var(--rose);
+  background: var(--rose-soft);
+  border-right-color: transparent;
+  border-radius: 8px;
+}

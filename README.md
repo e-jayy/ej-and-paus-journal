@@ -87,6 +87,10 @@ birthday message that pops up the first time she opens it. Then run
   the paper is deleted (Ctrl/Cmd+Z brings it back). Zoom in as far as you like.
   If the other person is on a different spread, a "… is on pages 5–6 →" button
   takes you there.
+- **View mode**: tap **👁 View** next to the page-turner to just read. The
+  toolbar and editing controls disappear, empty titles/dates are hidden, and
+  nothing can be changed by accident; you can still flip, zoom and play
+  videos. Tap **✏️ Edit** to go back. Each device remembers which mode it's in.
 - **Titles and dates**: each page has a title line and a date in its top
   margin. Click to type a title, or tap the date to pick one.
 - **Page numbers follow the dates**: pages are numbered oldest first, with

@@ -144,6 +144,16 @@ const formatDate = (iso) => {
 };
 
 /** The title + date written at the top of one page. */
+/** View mode: the title and date as plain handwriting (nothing if empty). */
+function PageHeaderView({ side, meta }) {
+  return (
+    <div className={`page-header ${side} read-only`}>
+      <span className="page-date">{meta.date ? formatDate(meta.date) : ""}</span>
+      <span className="page-title">{meta.title || ""}</span>
+    </div>
+  );
+}
+
 function PageHeader({ side, meta, onCommit }) {
   const [title, setTitle] = useState(meta.title || "");
   const focused = useRef(false);
@@ -208,6 +218,22 @@ export default function Notebook({ user }) {
   const [busyUploads, setBusyUploads] = useState(0);
   const [progress, setProgress] = useState(null); // { label, value: 0..1 | null }
   const [saveState, setSaveState] = useState("saved"); // saved | saving | error
+  // View mode: flip and zoom, but nothing can be changed. Remembered per device.
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      return localStorage.getItem("our-notebook-view-mode") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleViewMode = () =>
+    setViewMode((v) => {
+      try {
+        localStorage.setItem("our-notebook-view-mode", v ? "0" : "1");
+      } catch {}
+      return !v;
+    });
+  const Header = viewMode ? PageHeaderView : PageHeader;
   const fileInput = useRef(null);
 
   // Which two-page spread is open (0 = pages 1–2).
@@ -828,6 +854,11 @@ export default function Notebook({ user }) {
 
   // Intercept drops of videos/GIFs (Excalidraw would turn GIFs into still frames).
   const onDropCapture = (e) => {
+    if (viewMode) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const files = [...(e.dataTransfer?.files || [])];
     if (!files.some((f) => isVideo(f) || isGif(f))) return;
     e.preventDefault();
@@ -840,6 +871,7 @@ export default function Notebook({ user }) {
   };
 
   const onPaste = (_data, event) => {
+    if (viewMode) return false;
     const files = [...(event?.clipboardData?.files || [])];
     if (files.some((f) => isVideo(f) || isGif(f))) {
       insertFiles(files);
@@ -912,7 +944,7 @@ export default function Notebook({ user }) {
         {!isMobile && <span className="label">{statusLabel}</span>}
       </span>
       {/* On phones the toolbar is full, so this lives in the ☰ menu instead. */}
-      {!isMobile && (
+      {!isMobile && !viewMode && (
         <button
           className="add-media"
           onClick={() => fileInput.current?.click()}
@@ -959,7 +991,7 @@ export default function Notebook({ user }) {
           e.target.value = "";
         }}
       />
-      <div className="desk">
+      <div className={`desk${viewMode ? " view-mode" : ""}`}>
       <div className="paper-spread" ref={paperRef} aria-hidden>
         <div className="paper-cover" />
         <div className="paper-page left">
@@ -978,6 +1010,7 @@ export default function Notebook({ user }) {
         onScrollChange={onScrollChange}
         onPaste={onPaste}
         isCollaborating
+        viewModeEnabled={viewMode}
         name={NOTEBOOK_TITLE}
         renderTopRightUI={renderTopRightUI}
         validateEmbeddable={(link) => (link.includes(MEDIA_MARK) ? true : undefined)}
@@ -991,9 +1024,11 @@ export default function Notebook({ user }) {
         }}
       >
         <MainMenu>
-          <MainMenu.Item onSelect={() => fileInput.current?.click()}>
-            Add photo / video / GIF
-          </MainMenu.Item>
+          {!viewMode && (
+            <MainMenu.Item onSelect={() => fileInput.current?.click()}>
+              Add photo / video / GIF
+            </MainMenu.Item>
+          )}
           <MainMenu.Item onSelect={downloadBackup}>Download backup</MainMenu.Item>
           <MainMenu.DefaultItems.SaveAsImage />
           <MainMenu.DefaultItems.SearchMenu />
@@ -1007,8 +1042,8 @@ export default function Notebook({ user }) {
 
       <div className="page-headers" ref={headersRef}>
         {["L", "R"].map((side) => (
-          <PageHeader
-            key={`${spread}-${side}`}
+          <Header
+            key={`${spread}-${side}-${viewMode}`}
             side={side}
             meta={currentMeta[side] || {}}
             onCommit={(patch) => updatePageMeta(spread, side, patch)}
@@ -1017,6 +1052,14 @@ export default function Notebook({ user }) {
       </div>
 
       <nav className="pager" aria-label="Turn pages">
+        <button
+          className={`mode-toggle${viewMode ? " viewing" : ""}`}
+          onClick={toggleViewMode}
+          aria-pressed={viewMode}
+          title={viewMode ? "Switch to editing" : "Switch to view only"}
+        >
+          {viewMode ? "✏️ Edit" : "👁 View"}
+        </button>
         <button
           onClick={() => goToSpread(prevSpread)}
           disabled={prevSpread == null}
