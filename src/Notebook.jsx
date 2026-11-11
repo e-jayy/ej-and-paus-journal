@@ -43,9 +43,9 @@ import {
   isSpreadFrame,
   lastUsedSpread,
   orderPages,
-  pagesMeta,
+  spreadMeta,
   spreadOf,
-  withPageMeta,
+  withSpreadMeta,
   makeSpreadFrame,
   moveLooseContentOntoFirstSpread,
   spreadAtX,
@@ -332,13 +332,13 @@ export default function Notebook({ user, onShowBirthday }) {
 
   /** Save a page's title/date onto its spread frame (synced like everything else). */
   const updatePageMeta = useCallback(
-    (n, side, patch) => {
+    (n, patch) => {
       const ex = apiRef.current;
       if (!ex) return;
       ensureSpreadFrame(n);
       const all = ex.getSceneElementsIncludingDeleted();
       const frame = all.find((e) => e.id === spreadId(n));
-      const updated = withPageMeta(frame, side, patch);
+      const updated = withSpreadMeta(frame, patch);
       ex.updateScene({
         elements: all.map((e) => (e.id === updated.id ? updated : e)),
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
@@ -856,7 +856,8 @@ export default function Notebook({ user, onShowBirthday }) {
   const orderPos = order.indexOf(spread);
   const prevSpread = orderPos > 0 ? order[orderPos - 1] : null;
   const nextSpread = orderPos >= 0 && orderPos < order.length - 1 ? order[orderPos + 1] : null;
-  const currentMeta = pagesMeta(frames.find((f) => f.id === spreadId(spread)));
+  // One title + date per spread: title on the left page, date on the right.
+  const currentMeta = spreadMeta(frames.find((f) => f.id === spreadId(spread)));
 
   /** Everything (drawings, text, photos, titles, dates) as one file. */
   const downloadBackup = () => {
@@ -1107,8 +1108,9 @@ export default function Notebook({ user, onShowBirthday }) {
           <Header
             key={`${spread}-${side}-${viewMode}`}
             side={side}
-            meta={currentMeta[side] || {}}
-            onCommit={(patch) => updatePageMeta(spread, side, patch)}
+            part={side === "L" ? "title" : "date"}
+            meta={currentMeta}
+            onCommit={(patch) => updatePageMeta(spread, patch)}
           />
         ))}
       </div>

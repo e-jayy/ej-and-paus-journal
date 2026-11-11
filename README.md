@@ -101,18 +101,17 @@ Show birthday card). Then run
   the pages from that date (title + page number), or tick **Whole month**. With
   no date picked it lists every dated page, oldest first. Tap a result to jump
   there.
-- **Titles and dates**: each page has a title (centred at the top) and a date
-  in its top-right corner. Click to type a title, or tap the date to pick one.
-  Titles are text boxes: long titles wrap onto more lines instead of being cut
-  off (Shift+Enter for a new line). While editing a title, a small bar appears
-  above it: pick a **font** (Handwriting, Marker, Serif, Typewriter, Rounded),
-  set the text size with the **A** slider, or drag the **⠿** grip to move it
-  anywhere on the page. It snaps to the centre line and its usual height when
-  close; **Centre** puts it back. Drag the handle on the box's right edge to
-  make it wider or narrower (double-click it for automatic width).
-- **Page numbers follow the dates**: pages are numbered oldest first, with
-  undated pages after them, and ‹ › flips through spreads in that order. If a
-  spread's two pages have far-apart dates, it may read "Pages 2 & 5".
+- **Titles and dates**: each two-page spread has one title (on the left page) and
+  one date (top-right of the right page). Click to type the title, or tap the
+  date to pick one. Titles are text boxes: long titles wrap onto more lines
+  (Shift+Enter for a new line). While editing, a small bar appears above the
+  title: pick a **font** (Handwriting, Marker, Serif, Typewriter, Rounded), set
+  the size with the **A** slider, or drag the **⠿** grip to move it anywhere on
+  the left page (it snaps to the centre line and usual height; **Centre** puts
+  it back). Drag the handle on its right edge to change the box width
+  (double-click for automatic).
+- **Page numbers follow the dates**: spreads are ordered by their date, oldest
+  first, with undated spreads after them; ‹ › flips through them in that order.
 - **Draw / write**: the Excalidraw toolbar at the top (pen, text, shapes, arrows…).
 - **Photos, GIFs, videos**: the **＋ Photo / video / GIF** button, the ☰ menu,
   drag-and-drop, or paste. Click a video once to use its play controls.

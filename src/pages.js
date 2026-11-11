@@ -58,17 +58,6 @@ export function makeSpreadFrame(n) {
 /** A spread's per-page titles/dates, kept on its frame: { L: {title, date}, R: {...} }. */
 export const pagesMeta = (frame) => frame?.customData?.pages || {};
 
-/** Copy of a spread frame with one page's title/date changed. */
-export function withPageMeta(frame, side, patch) {
-  const pages = pagesMeta(frame);
-  return newElementWith(frame, {
-    customData: {
-      ...(frame.customData || {}),
-      pages: { ...pages, [side]: { ...(pages[side] || {}), ...patch } },
-    },
-  });
-}
-
 const hasMeta = (frame) =>
   Object.values(pagesMeta(frame)).some((p) => p && (p.title || p.date));
 
@@ -84,30 +73,51 @@ export function lastUsedSpread(elements) {
 }
 
 /**
- * Number the pages by date. Dated pages come first, oldest first; undated
- * pages follow in the order they sit in the notebook. Spreads are then
- * visited in order of their lowest page number.
- * Returns { numbers: Map("n-L" -> page number), order: [spread indexes] }.
+ * A spread's shared title + date (and title style). Stored on the left page's
+ * entry; older notebooks that had separate titles/dates per page fall back to
+ * the right page's when the left has none.
+ */
+export function spreadMeta(frame) {
+  const { L = {}, R = {} } = pagesMeta(frame);
+  return {
+    ...R,
+    ...L,
+    title: L.title || R.title || "",
+    date: L.date || R.date || "",
+  };
+}
+
+/** Copy of a spread frame with its shared title/date/style changed. */
+export function withSpreadMeta(frame, patch) {
+  return newElementWith(frame, {
+    customData: {
+      ...(frame.customData || {}),
+      pages: { L: { ...spreadMeta(frame), ...patch } },
+    },
+  });
+}
+
+/**
+ * Order the spreads by date: dated ones first, oldest first; undated ones
+ * after, in the order they sit in the notebook. Each spread's two pages get
+ * consecutive numbers (1–2, 3–4, ...).
+ * Returns { numbers: Map("n-L"/"n-R" -> page number), order: [spread indexes] }.
  */
 export function orderPages(frames, spreadCount) {
   const byN = new Map(frames.map((f) => [Number(f.id.slice(7)), f]));
-  const pages = [];
-  for (let n = 0; n < spreadCount; n++) {
-    const meta = pagesMeta(byN.get(n));
-    for (const side of ["L", "R"]) pages.push({ n, side, date: meta[side]?.date || "" });
-  }
-  pages.sort((a, b) => {
+  const spreads = [];
+  for (let n = 0; n < spreadCount; n++) spreads.push({ n, date: spreadMeta(byN.get(n)).date });
+  spreads.sort((a, b) => {
     if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1;
     if (!!a.date !== !!b.date) return a.date ? -1 : 1;
-    return a.n - b.n || (a.side === "L" ? -1 : 1);
+    return a.n - b.n;
   });
-  const numbers = new Map(pages.map((p, i) => [`${p.n}-${p.side}`, i + 1]));
-  const order = [...new Set(pages.map((p) => p.n))].sort(
-    (a, b) =>
-      Math.min(numbers.get(`${a}-L`), numbers.get(`${a}-R`)) -
-      Math.min(numbers.get(`${b}-L`), numbers.get(`${b}-R`)),
-  );
-  return { numbers, order };
+  const numbers = new Map();
+  spreads.forEach((s, i) => {
+    numbers.set(`${s.n}-L`, 2 * i + 1);
+    numbers.set(`${s.n}-R`, 2 * i + 2);
+  });
+  return { numbers, order: spreads.map((s) => s.n) };
 }
 
 /**

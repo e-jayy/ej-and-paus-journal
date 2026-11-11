@@ -20,7 +20,7 @@ const fontFor = (key) => TITLE_FONTS.find((f) => f.key === key) || TITLE_FONTS[0
 // Default spot: centred, in the top margin. Positions are stored as a
 // fraction of the page width (x, box centre) and page units from the top (y, box top).
 const DEFAULT_X = 0.5;
-const DEFAULT_Y = 46; // top edge of the title box (just below the date)
+const DEFAULT_Y = 34; // top edge of the title box
 const SNAP_X = 28; // page units
 const SNAP_Y = 22;
 export const MIN_TITLE_SIZE = 16;
@@ -54,11 +54,13 @@ const titleStyle = (meta, live = {}) => {
 const zoomOf = (el) => parseFloat(el.closest(".page-headers")?.style.getPropertyValue("--z")) || 1;
 
 /** View mode: the title and date exactly where they are, not editable. */
-export function PageHeaderView({ side, meta }) {
+export function PageHeaderView({ side, part, meta }) {
   return (
     <div className={`page-header ${side} read-only`}>
-      <span className="page-date">{meta.date ? formatDate(meta.date) : ""}</span>
-      {meta.title && (
+      {part === "date" && (
+        <span className="page-date">{meta.date ? formatDate(meta.date) : ""}</span>
+      )}
+      {part === "title" && meta.title && (
         <div className="title-wrap" style={titleStyle(meta)}>
           <div className="page-title">{meta.title}</div>
         </div>
@@ -67,7 +69,8 @@ export function PageHeaderView({ side, meta }) {
   );
 }
 
-export function PageHeader({ side, meta, onCommit }) {
+/** `part` is "title" (left page) or "date" (right page). */
+export function PageHeader({ side, part, meta, onCommit }) {
   const [title, setTitle] = useState(meta.title || "");
   const [drag, setDrag] = useState(null); // { x, y, snapX, snapY } while dragging
   const [live, setLive] = useState({}); // size/width preview while sliding/resizing
@@ -168,6 +171,7 @@ export function PageHeader({ side, meta, onCommit }) {
 
   return (
     <div className={`page-header ${side}${drag ? " dragging" : ""}`}>
+      {part === "date" && (
       <label className={`page-date${meta.date ? "" : " empty"}`}>
         <span>{meta.date ? formatDate(meta.date) : "Add a date"}</span>
         <input
@@ -183,13 +187,17 @@ export function PageHeader({ side, meta, onCommit }) {
             }
           }}
           onChange={(e) => onCommit({ date: e.target.value })}
-          aria-label={`${side === "L" ? "Left" : "Right"} page date`}
+          aria-label="Date for these pages"
         />
       </label>
+      )}
 
-      {drag?.snapX && <div className="snap-guide vertical" aria-hidden />}
-      {drag?.snapY && <div className="snap-guide horizontal" aria-hidden style={{ "--ty": DEFAULT_Y }} />}
+      {part === "title" && drag?.snapX && <div className="snap-guide vertical" aria-hidden />}
+      {part === "title" && drag?.snapY && (
+        <div className="snap-guide horizontal" aria-hidden style={{ "--ty": DEFAULT_Y }} />
+      )}
 
+      {part === "title" && (
       <div
         ref={wrapRef}
         className="title-wrap editable"
@@ -248,7 +256,7 @@ export function PageHeader({ side, meta, onCommit }) {
           maxLength={120}
           rows={1}
           spellCheck={false}
-          aria-label={`${side === "L" ? "Left" : "Right"} page title`}
+          aria-label="Title for these pages"
           onFocus={() => (focused.current = true)}
           onBlur={(e) => {
             focused.current = false;
@@ -277,6 +285,7 @@ export function PageHeader({ side, meta, onCommit }) {
           title="Drag to change width · double-click for automatic"
         />
       </div>
+      )}
     </div>
   );
 }
