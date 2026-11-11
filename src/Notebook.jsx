@@ -133,6 +133,15 @@ function PageHeader({ side, meta, onCommit }) {
         <input
           type="date"
           value={meta.date || ""}
+          // Desktop browsers only open the calendar from its small icon, so
+          // open it ourselves on any click (phones/tablets do this anyway).
+          onClick={(e) => {
+            try {
+              e.currentTarget.showPicker();
+            } catch {
+              e.currentTarget.focus();
+            }
+          }}
           onChange={(e) => onCommit({ date: e.target.value })}
           aria-label={`${side === "L" ? "Left" : "Right"} page date`}
         />

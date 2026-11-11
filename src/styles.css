@@ -813,6 +813,10 @@ input {
 .page-date {
   position: relative;
   align-self: flex-end;
+  /* Bigger tap/click area than the text itself. */
+  padding: calc(6px * var(--z)) calc(10px * var(--z));
+  margin: calc(-6px * var(--z)) calc(-10px * var(--z));
+  border-radius: calc(8px * var(--z));
   font-family: var(--hand);
   font-size: calc(22px * var(--z));
   line-height: 1.2;
@@ -821,11 +825,12 @@ input {
 }
 
 .page-date.empty {
-  color: #c4bbb0;
+  color: #b0a597;
 }
 
 .page-date:hover {
   color: var(--rose);
+  background: rgba(255, 227, 236, 0.6);
 }
 
 /* The real date input sits invisibly on top, so tapping opens the picker. */
