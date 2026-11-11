@@ -520,7 +520,7 @@ export default function Notebook({ user }) {
           <div className="bar">
             <div
               className={progress.value == null ? "indeterminate" : ""}
-              style={progress.value != null ? { width: `${progress.value * 100}%` } : undefined}
+              style={progress.value != null ? { transform: `scaleX(${progress.value})` } : undefined}
             />
           </div>
           <small>Keep this page open until it's done</small>
