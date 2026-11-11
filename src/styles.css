@@ -1577,3 +1577,11 @@ input {
   opacity: 0;
   pointer-events: none;
 }
+
+.cover-error {
+  margin: -8px 0 0;
+  max-width: min(420px, 90vw);
+  font-size: 0.8rem;
+  text-align: center;
+  color: rgba(251, 246, 236, 0.6);
+}

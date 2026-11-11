@@ -36,6 +36,7 @@ async function writeCachedCover(blob) {
 export default function Cover({ onOpen }) {
   const [src, setSrc] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [reason, setReason] = useState(""); // why the photo didn't load (shown on the cover)
   const [ready, setReady] = useState(false); // photo loaded, failed, or waited long enough
   const [opening, setOpening] = useState(false);
   const opened = useRef(false);
@@ -67,6 +68,7 @@ export default function Cover({ onOpen }) {
           return;
         } catch (e) {
           console.warn("Cover photo didn't load, retrying", e);
+          if (alive) setReason(String(e?.message || e?.error || e?.statusCode || e) + (e?.status ? ` (${e.status})` : ""));
           await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
         }
       }
@@ -136,7 +138,10 @@ export default function Cover({ onOpen }) {
                   src={src}
                   alt={COVER_TITLE}
                   draggable={false}
-                  onError={() => setFailed(true)}
+                  onError={() => {
+                    setReason("the photo file couldn't be displayed");
+                    setFailed(true);
+                  }}
                 />
               ) : (
                 <div className="cover-fallback">
@@ -145,6 +150,13 @@ export default function Cover({ onOpen }) {
               )}
             </div>
           </div>
+          {(failed || !src) && (
+            <p className="cover-error">
+              {failed || reason
+                ? `The cover photo didn't load${reason ? `: ${reason}` : ""}`
+                : "The cover photo is still loading…"}
+            </p>
+          )}
           <p className="cover-prompt">
             {touch ? "Tap anywhere" : "Press any button"} to open our journal
           </p>
