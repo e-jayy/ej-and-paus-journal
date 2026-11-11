@@ -1560,3 +1560,20 @@ input {
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 }
+
+/* Cover: a quiet "opening…" while the photo loads, then the book appears. */
+.cover-waiting {
+  margin: 0;
+  font-family: var(--hand);
+  font-size: clamp(1.4rem, 3.4vh, 2rem);
+  color: rgba(251, 246, 236, 0.75);
+  animation: prompt-pulse 1.6s ease-in-out infinite;
+}
+
+.cover-preload {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

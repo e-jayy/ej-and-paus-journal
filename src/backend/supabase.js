@@ -67,6 +67,10 @@ export function createSupabaseBackend(url, anonKey) {
     },
 
     async signOut() {
+      // Forget the cover photo kept on this device.
+      try {
+        await caches.delete("our-notebook");
+      } catch {}
       await sb.auth.signOut();
     },
 
