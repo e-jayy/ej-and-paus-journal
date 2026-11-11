@@ -851,18 +851,25 @@ input {
   position: absolute;
   left: calc(var(--tx) * 100%);
   top: calc(var(--ty) * var(--z) * 1px);
-  transform: translate(-50%, -50%);
+  /* Anchored at its top-centre, so it grows downwards as text wraps. */
+  transform: translateX(-50%);
+  width: max-content;
   max-width: calc(100% - 60px * var(--z));
   display: inline-grid;
   pointer-events: auto;
 }
 
-/* Invisible copy of the text that sets the input's width. */
+/* Invisible copy of the text that sets the box's width and height, so the
+   box grows with the text and wraps instead of cutting it off. */
 .title-wrap.editable::after {
   content: attr(data-value) " ";
   visibility: hidden;
-  white-space: pre;
-  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: center;
+  /* Same underline space as the real text box, plus a little extra room so
+     letter tails (g, y, p) never get clipped. */
+  border-bottom: max(1px, calc(1.5px * var(--z))) solid transparent;
 }
 
 .title-wrap.editable::after,
@@ -878,6 +885,11 @@ input {
 .page-title {
   width: 100%;
   min-width: 1ch;
+  height: 100%;
+  overflow: hidden;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   border: none;
   border-bottom: max(1px, calc(1.5px * var(--z))) dashed transparent;
   background: transparent;
@@ -898,8 +910,6 @@ input {
 }
 
 .page-header.read-only .page-title {
-  white-space: nowrap;
-  overflow: hidden;
   border: none;
 }
 
@@ -1282,4 +1292,53 @@ input {
   font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
   font-size: 0.8rem;
+}
+
+/* Title box: dashed outline while editing, size slider, width handle. */
+.title-wrap.editable:hover,
+.title-wrap.editable:focus-within {
+  outline: max(1px, calc(1.5px * var(--z))) dashed #e2c9d3;
+  outline-offset: calc(4px * var(--z));
+  border-radius: calc(4px * var(--z));
+}
+
+.title-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.title-size input {
+  width: 80px;
+  accent-color: var(--rose);
+  cursor: pointer;
+}
+
+.title-resize {
+  position: absolute;
+  top: 50%;
+  right: calc(-6px * var(--z) - 7px);
+  width: 12px;
+  height: 26px;
+  transform: translateY(-50%);
+  border-radius: 6px;
+  background: #fffdf8;
+  border: 1.5px solid var(--rose);
+  cursor: ew-resize;
+  touch-action: none;
+  display: none;
+}
+
+.title-wrap.editable:hover .title-resize,
+.title-wrap.editable:focus-within .title-resize {
+  display: block;
+}
+
+/* (After the shared padding rule, so it isn't overridden.) Extra room under
+   the text so letter tails never get clipped in any font. */
+.title-wrap.editable::after {
+  padding-bottom: calc(var(--title-size) * 0.18 * var(--z) * 1px);
 }

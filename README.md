@@ -102,10 +102,13 @@ birthday message that pops up the first time she opens it. Then run
   there.
 - **Titles and dates**: each page has a title (centred at the top) and a date
   in its top-right corner. Click to type a title, or tap the date to pick one.
-  While editing a title, a small bar appears above it: pick a **font**
-  (Handwriting, Marker, Serif, Typewriter, Rounded), or drag the **⠿** grip to
-  move the title anywhere on the page. It snaps to the centre line and its
-  usual height when close; **Centre** puts it back.
+  Titles are text boxes: long titles wrap onto more lines instead of being cut
+  off (Shift+Enter for a new line). While editing a title, a small bar appears
+  above it: pick a **font** (Handwriting, Marker, Serif, Typewriter, Rounded),
+  set the text size with the **A** slider, or drag the **⠿** grip to move it
+  anywhere on the page. It snaps to the centre line and its usual height when
+  close; **Centre** puts it back. Drag the handle on the box's right edge to
+  make it wider or narrower (double-click it for automatic width).
 - **Page numbers follow the dates**: pages are numbered oldest first, with
   undated pages after them, and ‹ › flips through spreads in that order. If a
   spread's two pages have far-apart dates, it may read "Pages 2 & 5".
