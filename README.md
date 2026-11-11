@@ -104,11 +104,13 @@ Show birthday card). Then run
 - **Titles and dates**: each two-page spread has one title (on the left page) and
   one date (top-right of the right page). Click to type the title, or tap the
   date to pick one. Titles are text boxes: long titles wrap onto more lines
-  (Shift+Enter for a new line). While editing, a small bar appears above the
-  title: pick a **font** (Handwriting, Marker, Serif, Typewriter, Rounded), set
-  the size with the **A** slider, or drag the **⠿** grip to move it anywhere on
-  the left page (it snaps to the centre line and usual height; **Centre** puts
-  it back). Drag the handle on its right edge to change the box width
+  (Shift+Enter for a new line). Editing a title opens a style panel on the
+  left, just like the text tool's: **colour** (or any custom colour), **font
+  size** (S/M/L/XL or the slider), **font** (Hand-drawn, Normal, Code,
+  Handwriting, Marker, Serif, Typewriter, Rounded), **text align** and
+  **opacity**. Drag the **⠿** grip above the title to move it anywhere on the
+  left page (it snaps to the centre line and usual height; **Centre** puts it
+  back). Drag the handle on its right edge to change the box width
   (double-click for automatic).
 - **Page numbers follow the dates**: spreads are ordered by their date, oldest
   first, with undated spreads after them; ‹ › flips through them in that order.

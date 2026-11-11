@@ -1111,6 +1111,9 @@ export default function Notebook({ user, onShowBirthday }) {
             part={side === "L" ? "title" : "date"}
             meta={currentMeta}
             onCommit={(patch) => updatePageMeta(spread, patch)}
+            onActivate={() =>
+              apiRef.current?.updateScene({ appState: { selectedElementIds: {}, selectedGroupIds: {} } })
+            }
           />
         ))}
       </div>

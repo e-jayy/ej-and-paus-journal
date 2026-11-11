@@ -1,21 +1,40 @@
 // The date and title written on each page.
 //
-// Titles are centred text boxes. Tap one to get a small bar above it with a
-// ⠿ grip (drag anywhere on the page, snapping to the centre line and usual
-// height), a font menu and a size slider. The handle on the right edge sets
-// the box width; text wraps to fit, so it never gets cut off.
+// Titles are text boxes with the same styling options as the notebook's
+// text tool: editing one opens a panel (colour, font size, font, alignment,
+// opacity) where the text tool's panel appears. The small bar above the title
+// has a ⠿ grip (drag anywhere on the page, snapping to the centre line and
+// usual height) and Centre; the right-edge handle sets the box width. Text
+// wraps to fit, so it never gets cut off.
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { PAGE_H, PAGE_W } from "./pages";
 
 export const TITLE_FONTS = [
+  // The notebook's own text-tool fonts…
+  { key: "excali", label: "Hand-drawn", family: '"Excalifont", "Caveat", cursive', size: 36, weight: 400 },
+  { key: "normal", label: "Normal", family: '"Nunito", system-ui, sans-serif', size: 34, weight: 600 },
+  { key: "code", label: "Code", family: '"Comic Shanns", "Courier New", monospace', size: 32, weight: 400 },
+  // …plus a few journal-ish extras.
   { key: "hand", label: "Handwriting", family: '"Caveat", cursive', size: 42, weight: 700 },
   { key: "marker", label: "Marker", family: '"Permanent Marker", cursive', size: 32, weight: 400 },
   { key: "serif", label: "Serif", family: '"Fraunces", Georgia, serif', size: 34, weight: 700 },
   { key: "type", label: "Typewriter", family: '"Special Elite", "Courier New", monospace', size: 32, weight: 400 },
   { key: "round", label: "Rounded", family: '"Nunito", system-ui, sans-serif', size: 34, weight: 800 },
 ];
-const fontFor = (key) => TITLE_FONTS.find((f) => f.key === key) || TITLE_FONTS[0];
+const fontFor = (key) =>
+  TITLE_FONTS.find((f) => f.key === key) || TITLE_FONTS.find((f) => f.key === "hand");
+
+// Same quick colour picks as the text tool.
+export const TITLE_COLORS = ["#1e1e1e", "#e03131", "#2f9e44", "#1971c2", "#f08c00"];
+const TITLE_SIZES = [
+  ["S", 28],
+  ["M", 40],
+  ["L", 56],
+  ["XL", 80],
+];
+const DEFAULT_COLOR = "#2b2522";
 
 // Default spot: centred, in the top margin. Positions are stored as a
 // fraction of the page width (x, box centre) and page units from the top (y, box top).
@@ -47,6 +66,9 @@ const titleStyle = (meta, live = {}) => {
     "--title-font": font.family,
     "--title-size": live.size ?? meta.titleSize ?? font.size,
     "--title-weight": font.weight,
+    "--title-color": live.color ?? meta.titleColor ?? DEFAULT_COLOR,
+    "--title-align": meta.titleAlign ?? "center",
+    "--title-opacity": (live.opacity ?? meta.titleOpacity ?? 100) / 100,
     ...(w ? { width: "calc(" + w + " * var(--z) * 1px)" } : {}),
   };
 };
@@ -70,8 +92,10 @@ export function PageHeaderView({ side, part, meta }) {
 }
 
 /** `part` is "title" (left page) or "date" (right page). */
-export function PageHeader({ side, part, meta, onCommit }) {
+export function PageHeader({ side, part, meta, onCommit, onActivate }) {
   const [title, setTitle] = useState(meta.title || "");
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelRef = useRef(null);
   const [drag, setDrag] = useState(null); // { x, y, snapX, snapY } while dragging
   const [live, setLive] = useState({}); // size/width preview while sliding/resizing
   const sizeTimer = useRef(null);
@@ -132,14 +156,43 @@ export function PageHeader({ side, part, meta, onCommit }) {
   const font = fontFor(meta.titleFont);
   const size = live.size ?? meta.titleSize ?? font.size;
 
-  const changeSize = (v) => {
-    setLive((l) => ({ ...l, size: v }));
+  /** Sliders/colour picker: preview instantly, save once you stop. */
+  const LIVE_KEYS = { size: "titleSize", opacity: "titleOpacity", color: "titleColor" };
+  const changeLive = (key, v) => {
+    setLive((l) => ({ ...l, [key]: v }));
     clearTimeout(sizeTimer.current);
     sizeTimer.current = setTimeout(() => {
-      onCommit({ titleSize: v });
-      setLive((l) => ({ ...l, size: undefined }));
+      onCommit({ [LIVE_KEYS[key]]: v });
+      setLive((l) => ({ ...l, [key]: undefined }));
     }, 350);
   };
+  const changeSize = (v) => changeLive("size", v);
+  const color = live.color ?? meta.titleColor ?? DEFAULT_COLOR;
+  const opacity = live.opacity ?? meta.titleOpacity ?? 100;
+  const align = meta.titleAlign ?? "center";
+
+  const openPanel = () => {
+    if (!panelOpen) {
+      setPanelOpen(true);
+      onActivate?.();
+    }
+  };
+
+  // Close the style panel when tapping anywhere else (or pressing Escape).
+  useEffect(() => {
+    if (!panelOpen) return;
+    const onDown = (e) => {
+      if (wrapRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
+      setPanelOpen(false);
+    };
+    const onKey = (e) => e.key === "Escape" && setPanelOpen(false);
+    window.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onDown, true);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [panelOpen]);
 
   /** Drag the right-edge handle to set the box width (it stays centred). */
   const startResize = (e) => {
@@ -200,7 +253,8 @@ export function PageHeader({ side, part, meta, onCommit }) {
       {part === "title" && (
       <div
         ref={wrapRef}
-        className="title-wrap editable"
+        onPointerDown={openPanel}
+        className={`title-wrap editable${panelOpen ? " active" : ""}`}
         style={titleStyle(meta, { ...live, ...(drag || {}) })}
         data-value={title || "Title"}
       >
@@ -214,30 +268,6 @@ export function PageHeader({ side, part, meta, onCommit }) {
           >
             ⠿
           </button>
-          <select
-            value={font.key}
-            onChange={(e) => onCommit({ titleFont: e.target.value })}
-            aria-label="Title font"
-            title="Title font"
-          >
-            {TITLE_FONTS.map((f) => (
-              <option key={f.key} value={f.key}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-          <label className="title-size" title="Text size">
-            <span aria-hidden>A</span>
-            <input
-              type="range"
-              min={MIN_TITLE_SIZE}
-              max={MAX_TITLE_SIZE}
-              step={1}
-              value={size}
-              onChange={(e) => changeSize(Number(e.target.value))}
-              aria-label="Title text size"
-            />
-          </label>
           {(meta.titleX != null || meta.titleY != null) && (
             <button
               type="button"
@@ -257,7 +287,10 @@ export function PageHeader({ side, part, meta, onCommit }) {
           rows={1}
           spellCheck={false}
           aria-label="Title for these pages"
-          onFocus={() => (focused.current = true)}
+          onFocus={() => {
+            focused.current = true;
+            openPanel();
+          }}
           onBlur={(e) => {
             focused.current = false;
             commitTitle(e.target.value);
@@ -286,6 +319,136 @@ export function PageHeader({ side, part, meta, onCommit }) {
         />
       </div>
       )}
+
+      {part === "title" &&
+        panelOpen &&
+        createPortal(
+          <div
+            className="title-panel"
+            ref={panelRef}
+            role="dialog"
+            aria-label="Title style"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <section>
+              <h4>Colour</h4>
+              <div className="tp-row">
+                {TITLE_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`tp-swatch${color.toLowerCase() === c ? " active" : ""}`}
+                    style={{ "--swatch": c }}
+                    onClick={() => onCommit({ titleColor: c })}
+                    aria-label={`Colour ${c}`}
+                    title={c}
+                  />
+                ))}
+                <span className="tp-divider" aria-hidden />
+                <label
+                  className={`tp-swatch tp-custom${TITLE_COLORS.includes(color.toLowerCase()) ? "" : " active"}`}
+                  style={{ "--swatch": color }}
+                  title="Pick any colour"
+                >
+                  <input
+                    type="color"
+                    value={/^#[0-9a-f]{6}$/i.test(color) ? color : "#2b2522"}
+                    onChange={(e) => changeLive("color", e.target.value)}
+                    aria-label="Pick any colour"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section>
+              <h4>Font size</h4>
+              <div className="tp-row">
+                {TITLE_SIZES.map(([label, v]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className={`tp-btn${size === v ? " active" : ""}`}
+                    onClick={() => onCommit({ titleSize: v })}
+                    title={`${label} (${v})`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="tp-slider">
+                <input
+                  type="range"
+                  min={MIN_TITLE_SIZE}
+                  max={MAX_TITLE_SIZE}
+                  step={1}
+                  value={size}
+                  onChange={(e) => changeSize(Number(e.target.value))}
+                  aria-label="Title text size"
+                />
+                <span>{size}</span>
+              </div>
+            </section>
+
+            <section>
+              <h4>Font family</h4>
+              <div className="tp-fonts">
+                {TITLE_FONTS.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    className={`tp-font${font.key === f.key ? " active" : ""}`}
+                    onClick={() => onCommit({ titleFont: f.key })}
+                    title={f.label}
+                  >
+                    <span style={{ fontFamily: f.family, fontWeight: f.weight }}>Aa</span>
+                    <small>{f.label}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h4>Text align</h4>
+              <div className="tp-row">
+                {["left", "center", "right"].map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    className={`tp-btn tp-align${align === a ? " active" : ""}`}
+                    onClick={() => onCommit({ titleAlign: a })}
+                    aria-label={`Align ${a}`}
+                    title={`Align ${a}`}
+                  >
+                    <svg viewBox="0 0 20 20" aria-hidden>
+                      {[4, 8, 12, 16].map((y, i) => {
+                        const w = i % 2 ? 9 : 14;
+                        const x = a === "left" ? 3 : a === "right" ? 17 - w : 10 - w / 2;
+                        return <line key={y} x1={x} x2={x + w} y1={y} y2={y} />;
+                      })}
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h4>Opacity</h4>
+              <div className="tp-slider">
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  step={5}
+                  value={opacity}
+                  onChange={(e) => changeLive("opacity", Number(e.target.value))}
+                  aria-label="Title opacity"
+                />
+                <span>{opacity}</span>
+              </div>
+            </section>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
