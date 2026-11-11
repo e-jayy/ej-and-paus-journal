@@ -11,7 +11,7 @@ import {
   viewportCoordsToSceneCoords,
 } from "@excalidraw/excalidraw";
 import { backend } from "./backend";
-import { MAX_UPLOAD_MB, NOTEBOOK_TITLE } from "./config";
+import { MAX_UPLOAD_MB, NOTEBOOK_TITLE, SHOW_BIRTHDAY_CARD } from "./config";
 import {
   blobToDataURL,
   dataURLToBlob,
@@ -148,7 +148,7 @@ function MediaEmbed({ media, clip }) {
   return <img className="media-fill" style={clip} src={src} alt="" draggable={false} />;
 }
 
-export default function Notebook({ user }) {
+export default function Notebook({ user, onShowBirthday }) {
   const [api, setApi] = useState(null);
   const [status, setStatus] = useState("connecting");
   const [busyUploads, setBusyUploads] = useState(0);
@@ -1087,6 +1087,9 @@ export default function Notebook({ user }) {
             <MainMenu.Item onSelect={() => fileInput.current?.click()}>
               Add photo / video / GIF
             </MainMenu.Item>
+          )}
+          {SHOW_BIRTHDAY_CARD && (
+            <MainMenu.Item onSelect={onShowBirthday}>Show birthday card 🎂</MainMenu.Item>
           )}
           <MainMenu.Item onSelect={downloadBackup}>Download backup</MainMenu.Item>
           <MainMenu.DefaultItems.SaveAsImage />

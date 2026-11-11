@@ -19,6 +19,8 @@ export default function App() {
   const [member, setMember] = useState(null);
   const [coverOpen, setCoverOpen] = useState(false);
   const openCover = useCallback(() => setCoverOpen(true), []);
+  const [birthdayReplay, setBirthdayReplay] = useState(0);
+  const showBirthday = useCallback(() => setBirthdayReplay((n) => n + 1), []);
 
   useEffect(() => {
     backend.getUser().then(setUser);
@@ -65,8 +67,8 @@ export default function App() {
   // The notebook loads underneath the cover, so it's ready the moment it opens.
   return (
     <>
-      <Notebook user={me} />
-      {coverOpen ? <BirthdayCard /> : <Cover onOpen={openCover} />}
+      <Notebook user={me} onShowBirthday={showBirthday} />
+      {coverOpen ? <BirthdayCard replay={birthdayReplay} /> : <Cover onOpen={openCover} />}
     </>
   );
 }

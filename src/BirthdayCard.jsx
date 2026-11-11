@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BIRTHDAY_MESSAGE,
   BIRTHDAY_NAME,
@@ -16,8 +16,12 @@ function seen() {
   }
 }
 
-export default function BirthdayCard() {
+/** Shows once per browser; `replay` (bumped from the menu) shows it again. */
+export default function BirthdayCard({ replay = 0 }) {
   const [open, setOpen] = useState(() => SHOW_BIRTHDAY_CARD && !seen());
+  useEffect(() => {
+    if (replay) setOpen(true);
+  }, [replay]);
   if (!open) return null;
 
   const close = () => {
