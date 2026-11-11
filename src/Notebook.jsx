@@ -63,6 +63,14 @@ const readSavedSpread = () => {
 };
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
+/** Back-to-front by each item's saved layer position (then by id, for ties). */
+const byLayer = (a, b) => {
+  const ai = a.index ?? "￿";
+  const bi = b.index ?? "￿";
+  if (ai !== bi) return ai < bi ? -1 : 1;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+};
+
 /** Videos/GIFs are HTML on top of the canvas, so hide the part past the paper with CSS. */
 function paperClip(el) {
   const n = spreadOf(el) ?? spreadAtX(el.x + el.width / 2);
@@ -231,7 +239,9 @@ export default function Notebook({ user, onShowBirthday }) {
           }
         }
         writeUnsaved(s.unsaved);
-        loaded = [...byId.values()];
+        // The database hands things back in no particular order: put them back
+        // in their saved layer order (front-to-back), or layers get scrambled.
+        loaded = [...byId.values()].sort(byLayer);
         // Anything from before pages existed goes onto the first spread
         // (version bumps mean it's saved + shared on the first change pass).
         let elements = moveLooseContentOntoFirstSpread(restoreElements(loaded, null));
