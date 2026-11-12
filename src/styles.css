@@ -1702,7 +1702,6 @@ input {
   display: flex;
   align-items: center;
   filter: drop-shadow(0 calc(2px * var(--z)) calc(3px * var(--z)) rgba(0, 0, 0, 0.35));
-  transition: left 0.2s ease-out, width 0.2s ease-out;
 }
 
 /* The tab shape: an arrow pointing away from the book, with a slightly lighter,
