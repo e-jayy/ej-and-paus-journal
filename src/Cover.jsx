@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { backend } from "./backend";
-import { COVER_IMAGE_PATH, COVER_TITLE } from "./config";
+import { BIRTHDAY_CARD_IMAGE_PATH, COVER_IMAGE_PATH, COVER_TITLE, SHOW_BIRTHDAY_CARD } from "./config";
+import { loadPrivateImage } from "./privateImage";
 
 const OPEN_MS = 1100;
 const WAIT_FOR_PHOTO_MS = 6000; // show the cover anyway after this long
@@ -43,6 +44,11 @@ export default function Cover({ onOpen }) {
 
   const touch =
     typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+
+  // Fetch the birthday card while the cover is showing, so it's ready next.
+  useEffect(() => {
+    if (SHOW_BIRTHDAY_CARD) loadPrivateImage(BIRTHDAY_CARD_IMAGE_PATH);
+  }, []);
 
   useEffect(() => {
     let alive = true;

@@ -5,6 +5,10 @@ export const NOTEBOOK_TITLE = "Our Notebook";
 // The birthday card that appears every time the notebook is opened.
 // Set SHOW_BIRTHDAY_CARD to false to turn it off.
 export const SHOW_BIRTHDAY_CARD = true;
+// The card is an image kept in the private Supabase "media" bucket at this
+// path (NOT in this public repo). Upload it in Supabase: Storage → media.
+export const BIRTHDAY_CARD_IMAGE_PATH = "birthday-card.jpg";
+// Only used if the card image can't be loaded:
 export const BIRTHDAY_NAME = "my love :33";
 export const BIRTHDAY_MESSAGE =
   "I made us a notebook that lives online, so we can keep " +

@@ -1585,3 +1585,97 @@ input {
   text-align: center;
   color: rgba(251, 246, 236, 0.6);
 }
+
+/* ---------- birthday card image ---------- */
+
+.birthday-card.has-image {
+  width: min(760px, 100%);
+  padding: 34px 22px 22px;
+  gap: 14px;
+}
+
+.birthday-image {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f3efe8;
+  cursor: zoom-in;
+  box-shadow: 0 1px 3px rgba(60, 40, 20, 0.12);
+}
+
+.birthday-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100dvh - 190px);
+  object-fit: contain;
+}
+
+.birthday-image .zoom-hint {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(43, 37, 34, 0.65);
+  color: #fff;
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.birthday-image:hover .zoom-hint,
+.birthday-image:focus-visible .zoom-hint {
+  opacity: 1;
+}
+
+@media (max-width: 599px), (pointer: coarse) {
+  .birthday-image .zoom-hint {
+    opacity: 1;
+  }
+}
+
+/* Full-screen view; on an upright phone the card turns sideways to fit. */
+.birthday-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 16, 14, 0.94);
+  cursor: zoom-out;
+  animation: fade-in 0.2s ease-out;
+}
+
+.birthday-zoom img {
+  max-width: 100vw;
+  max-height: 100dvh;
+  object-fit: contain;
+}
+
+@media (orientation: portrait) and (max-width: 700px) {
+  .birthday-zoom img {
+    max-width: 100dvh;
+    max-height: 100vw;
+    transform: rotate(90deg);
+  }
+}
+
+.birthday-zoom-close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
