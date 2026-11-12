@@ -1679,3 +1679,137 @@ input {
   line-height: 1;
   cursor: pointer;
 }
+
+/* ---------- sticky index tabs on the book's edge ---------- */
+
+.book-tabs,
+.book-tab-hits {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.book-tab,
+.book-tab-hit {
+  position: absolute;
+  top: calc(var(--tab-top) * var(--z) * 1px);
+  left: calc(var(--tab-x) * var(--z) * 1px);
+  width: calc(var(--tab-w) * var(--z) * 1px);
+  height: calc(var(--tab-h) * var(--z) * 1px);
+}
+
+.book-tab {
+  display: flex;
+  align-items: center;
+  filter: drop-shadow(0 calc(2px * var(--z)) calc(3px * var(--z)) rgba(0, 0, 0, 0.35));
+  transition: left 0.2s ease-out, width 0.2s ease-out;
+}
+
+/* The tab shape: an arrow pointing away from the book, with a slightly lighter,
+   creased strip where it's stuck down (like the real ones). */
+.book-tab::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 45%,
+      rgba(0, 0, 0, 0.06)),
+    var(--tab-color);
+}
+
+.book-tab.left::before {
+  clip-path: polygon(calc(26px * var(--z)) 0, 100% 0, 100% 100%, calc(26px * var(--z)) 100%, 0 50%);
+}
+
+.book-tab.right::before {
+  clip-path: polygon(0 0, calc(100% - 26px * var(--z)) 0, 100% 50%, calc(100% - 26px * var(--z)) 100%, 0 100%);
+}
+
+/* Sticky strip + fold line next to the paper. */
+.book-tab::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(30px * var(--z));
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.book-tab.left::after {
+  right: calc(40px * var(--z));
+  box-shadow: inset calc(-2px * var(--z)) 0 0 rgba(0, 0, 0, 0.08);
+}
+
+.book-tab.right::after {
+  left: calc(40px * var(--z));
+  box-shadow: inset calc(2px * var(--z)) 0 0 rgba(0, 0, 0, 0.08);
+}
+
+.book-tab-label {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: calc(min(24px, var(--tab-h) * 0.4px) * var(--z));
+  line-height: 1.1;
+  color: var(--tab-ink);
+}
+
+/* Text sits on the part that sticks out (not under the paper or the tip). */
+.book-tab.left .book-tab-label {
+  margin-left: calc(30px * var(--z));
+  max-width: calc((var(--tab-w) - 40 - 30 - 30 - 8) * var(--z) * 1px);
+}
+
+.book-tab.right .book-tab-label {
+  margin-left: calc((40px + 38px) * var(--z));
+  max-width: calc((var(--tab-w) - 40 - 30 - 30 - 8) * var(--z) * 1px);
+}
+
+.book-tab.current .book-tab-label {
+  text-decoration: underline;
+  text-decoration-thickness: calc(2px * var(--z));
+  text-underline-offset: calc(3px * var(--z));
+}
+
+/* Clickable areas: only the part that sticks out past the paper. */
+.book-tab-hit {
+  pointer-events: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.book-tab-hit.left {
+  width: calc((var(--tab-w) - 40) * var(--z) * 1px);
+}
+
+.book-tab-hit.right {
+  left: calc((var(--tab-x) + 40) * var(--z) * 1px);
+  width: calc((var(--tab-w) - 40) * var(--z) * 1px);
+}
+
+.book-tab-hit:focus-visible {
+  outline: 2px solid var(--rose);
+  outline-offset: 2px;
+}
+
+/* Tab colour swatches look like little tabs. */
+.tp-swatch.tp-tab {
+  width: 22px;
+  height: 18px;
+  border-radius: 3px;
+  clip-path: polygon(0 0, 72% 0, 100% 50%, 72% 100%, 0 100%);
+  border: none;
+}
+
+.tp-swatch.tp-tab.active {
+  outline: none;
+  clip-path: none;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #6965db;
+}

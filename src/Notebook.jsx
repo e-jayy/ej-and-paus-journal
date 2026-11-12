@@ -26,6 +26,7 @@ import {
 import { prepareVideo, VideoTooLongError } from "./video";
 import SearchPanel from "./SearchPanel";
 import { PageHeader, PageHeaderView } from "./PageHeader";
+import { BookTabHits, BookTabs, layoutTabs } from "./BookTabs";
 import {
   DEFAULT_OUTLINE_WIDTH,
   MAX_OUTLINE_WIDTH,
@@ -331,7 +332,7 @@ export default function Notebook({ user, onShowBirthday }) {
       } catch {}
       navigating.current = true;
       const frame = ex.getSceneElements().find((e) => e.id === spreadId(n));
-      ex.scrollToContent(frame, { fitToViewport: true, viewportZoomFactor: 0.92, animate: false });
+      ex.scrollToContent(frame, { fitToViewport: true, viewportZoomFactor: 0.72, animate: false });
       requestAnimationFrame(() => {
         navigating.current = false;
         const st = ex.getAppState();
@@ -871,6 +872,29 @@ export default function Notebook({ user, onShowBirthday }) {
   // One title + date per spread: title on the left page, date on the right.
   const currentMeta = spreadMeta(frames.find((f) => f.id === spreadId(spread)));
 
+  // Sticky index tabs: one per used spread, in notebook (date) order.
+  const tabs = useMemo(() => {
+    const byN = new Map(frames.map((f) => [Number(f.id.slice(7)), f]));
+    return layoutTabs(
+      order
+        .filter((n) => n <= lastUsed)
+        .map((n) => {
+          const meta = spreadMeta(byN.get(n));
+          const label =
+            meta.title?.split("\n")[0] ||
+            (meta.date
+              ? new Date(meta.date + "T00:00").toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
+              : `Pages ${pagesLabel(n)}`);
+          return { n, label, color: meta.tabColor };
+        }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frames, order, lastUsed, numbers]);
+
   /** Everything (drawings, text, photos, titles, dates) as one file. */
   const downloadBackup = () => {
     const ex = apiRef.current;
@@ -1168,6 +1192,8 @@ export default function Notebook({ user, onShowBirthday }) {
       <div className={`desk${viewMode ? " view-mode" : ""}`}>
       <div className="paper-spread" ref={paperRef} aria-hidden>
         <div className="paper-cover" />
+        {/* Sticky tabs sit on the cover, tucked under the pages. */}
+        <BookTabs tabs={tabs} current={spread} />
         <div className="paper-page left">
           <span className="page-no">{numbers.get(`${spread}-L`)}</span>
         </div>
@@ -1223,6 +1249,7 @@ export default function Notebook({ user, onShowBirthday }) {
       </Excalidraw>
 
       <div className="page-headers" ref={headersRef}>
+        <BookTabHits tabs={tabs} current={spread} onGo={goToSpread} />
         {["L", "R"].map((side) => (
           <Header
             key={`${spread}-${side}-${viewMode}`}

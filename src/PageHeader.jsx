@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { PAGE_H, PAGE_W } from "./pages";
+import { TAB_COLORS } from "./BookTabs";
 
 export const TITLE_FONTS = [
   // The notebook's own text-tool fonts…
@@ -355,6 +356,35 @@ export function PageHeader({ side, part, meta, onCommit, onActivate }) {
                     value={/^#[0-9a-f]{6}$/i.test(color) ? color : "#2b2522"}
                     onChange={(e) => changeLive("color", e.target.value)}
                     aria-label="Pick any colour"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section>
+              <h4>Tab colour</h4>
+              <div className="tp-row">
+                {TAB_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`tp-swatch tp-tab${meta.tabColor === c ? " active" : ""}`}
+                    style={{ "--swatch": c }}
+                    onClick={() => onCommit({ tabColor: c })}
+                    aria-label={`Tab colour ${c}`}
+                    title={c}
+                  />
+                ))}
+                <label
+                  className={`tp-swatch tp-custom${meta.tabColor && !TAB_COLORS.includes(meta.tabColor) ? " active" : ""}`}
+                  style={{ "--swatch": meta.tabColor || "#ffffff" }}
+                  title="Pick any tab colour"
+                >
+                  <input
+                    type="color"
+                    value={/^#[0-9a-f]{6}$/i.test(meta.tabColor || "") ? meta.tabColor : "#ffca28"}
+                    onChange={(e) => onCommit({ tabColor: e.target.value })}
+                    aria-label="Pick any tab colour"
                   />
                 </label>
               </div>

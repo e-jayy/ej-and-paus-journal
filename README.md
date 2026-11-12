@@ -95,6 +95,10 @@ Show birthday card). Then run
   edge; drag **Width** to set its thickness in pixels), or a **Sticky note** (pastel
   paper with a shadow and a strip of tape). The frame is attached to the
   photo, so it moves, resizes and deletes with it.
+- **Sticky tabs**: every spread you use gets a sticky index tab on the edge of
+  the book with its title (or date). Tabs fill the left side top to bottom, then
+  the right side. Click a tab to jump to that spread. Change a tab's colour in
+  the title's style panel (**Tab colour**).
 - **Search by date**: tap **🔍** next to the page-turner. Pick a day to see
   the pages from that date (title + page number), or tick **Whole month**. With
   no date picked it lists every dated page, oldest first. Tap a result to jump
