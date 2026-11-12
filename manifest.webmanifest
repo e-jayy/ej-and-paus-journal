@@ -1,0 +1,10 @@
+{
+  "name": "EJ and Pau's Journal",
+  "short_name": "EJ and Pau's Journal",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fbf6ec",
+  "theme_color": "#fbf6ec"
+}
