@@ -1750,12 +1750,14 @@ input {
   position: relative;
   z-index: 1;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  /* Whole title: wraps onto a second line, and the text is shrunk to fit if
+     needed (see fitLabels in BookTabs.jsx). */
+  white-space: normal;
+  overflow-wrap: normal;
   font-family: var(--hand);
   font-weight: 700;
-  font-size: calc(min(24px, var(--tab-h) * 0.4px) * var(--z));
-  line-height: 1.1;
+  font-size: calc(var(--fit, 24) * var(--z) * 1px);
+  line-height: 1.08;
   color: var(--tab-ink);
 }
 

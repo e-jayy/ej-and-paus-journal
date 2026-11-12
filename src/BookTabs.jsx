@@ -3,7 +3,36 @@
 // The coloured strips are drawn under the paper (over the black cover); a
 // matching invisible layer on top makes them clickable to jump to a spread.
 
+import { useLayoutEffect, useRef } from "react";
 import { PAGE_H, SPREAD_W } from "./pages";
+
+const MAX_TEXT = 24; // biggest label size (page units)
+const MIN_TEXT = 8;
+const LINE = 1.08; // line height
+
+/**
+ * Make every label show its whole title: one line if it fits, otherwise two,
+ * shrinking the text only as much as needed. Sizes are in page units, so the
+ * result doesn't depend on how far you're zoomed in.
+ */
+function fitLabels(container) {
+  if (!container) return;
+  for (const label of container.querySelectorAll(".book-tab-label")) {
+    const tab = label.parentElement;
+    const tabH = parseFloat(tab.style.getPropertyValue("--tab-h")) || 64;
+    const room = tabH - 8; // a little breathing space top and bottom
+    const z = tab.getBoundingClientRect().height / tabH || 1;
+    let size = Math.min(MAX_TEXT, room / LINE);
+    for (; size > MIN_TEXT; size -= 0.5) {
+      label.style.setProperty("--fit", size);
+      const maxH = Math.min(2 * size * LINE, room) * z;
+      const fitsTall = label.scrollHeight <= maxH + 1;
+      const fitsWide = label.scrollWidth <= label.clientWidth + 1;
+      if (fitsTall && fitsWide) break;
+    }
+    label.style.setProperty("--fit", Math.max(size, MIN_TEXT));
+  }
+}
 
 // Colours from a pack of sticky index tabs (rainbow order for new tabs).
 export const TAB_COLORS = [
@@ -74,8 +103,18 @@ const box = (t, current) => {
 
 /** The coloured tabs, drawn inside the paper layer (under the pages). */
 export function BookTabs({ tabs, current }) {
+  const ref = useRef(null);
+
+  // Fit the labels now, and again once the handwriting font arrives.
+  useLayoutEffect(() => {
+    const run = () => fitLabels(ref.current);
+    run();
+    document.fonts?.addEventListener?.("loadingdone", run);
+    return () => document.fonts?.removeEventListener?.("loadingdone", run);
+  }, [tabs, current]);
+
   return (
-    <div className="book-tabs" aria-hidden>
+    <div className="book-tabs" aria-hidden ref={ref}>
       {tabs.map((t) => (
         <div
           key={t.n}
