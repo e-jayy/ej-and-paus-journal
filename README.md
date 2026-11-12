@@ -39,11 +39,9 @@ served from the `gh-pages` branch.
    This builds the site with your keys and publishes it. The live site updates
    about a minute later. Run it again after any change.
 
-> The repo also has an automatic deploy (`.github/workflows/deploy.yml`) that
-> runs on every push. It only works while GitHub Actions is available on the
-> account. If you use it, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-> under **Settings → Secrets and variables → Actions → Variables**, and set
-> **Settings → Pages → Source** to **GitHub Actions**.
+> Pushing to GitHub doesn't publish anything by itself; `npm run deploy` is the
+> only publish step. (**Settings → Pages** should be set to deploy from the
+> `gh-pages` branch.)
 
 ### 3. Create the two accounts
 Signing in asks **"When is our anniversary?"**. Each person has their own
