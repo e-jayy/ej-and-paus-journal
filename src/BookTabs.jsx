@@ -2,37 +2,10 @@
 // title. They fill the left side top-to-bottom first, then the right side.
 // The coloured strips are drawn under the paper (over the black cover); a
 // matching invisible layer on top makes them clickable to jump to a spread.
+// Long titles end in "…"; hovering a tab pulls it further out of the book to
+// reveal the whole title.
 
-import { useLayoutEffect, useRef } from "react";
 import { PAGE_H, SPREAD_W } from "./pages";
-
-const MAX_TEXT = 24; // biggest label size (page units)
-const MIN_TEXT = 8;
-const LINE = 1.08; // line height
-
-/**
- * Make every label show its whole title: one line if it fits, otherwise two,
- * shrinking the text only as much as needed. Sizes are in page units, so the
- * result doesn't depend on how far you're zoomed in.
- */
-function fitLabels(container) {
-  if (!container) return;
-  for (const label of container.querySelectorAll(".book-tab-label")) {
-    const tab = label.parentElement;
-    const tabH = parseFloat(tab.style.getPropertyValue("--tab-h")) || 64;
-    const room = tabH - 8; // a little breathing space top and bottom
-    const z = tab.getBoundingClientRect().height / tabH || 1;
-    let size = Math.min(MAX_TEXT, room / LINE);
-    for (; size > MIN_TEXT; size -= 0.5) {
-      label.style.setProperty("--fit", size);
-      const maxH = Math.min(2 * size * LINE, room) * z;
-      const fitsTall = label.scrollHeight <= maxH + 1;
-      const fitsWide = label.scrollWidth <= label.clientWidth + 1;
-      if (fitsTall && fitsWide) break;
-    }
-    label.style.setProperty("--fit", Math.max(size, MIN_TEXT));
-  }
-}
 
 // Colours from a pack of sticky index tabs (rainbow order for new tabs).
 export const TAB_COLORS = [
@@ -58,6 +31,7 @@ const TAB_H = 64;
 const GAP = 10;
 const MARGIN = 46;
 const PER_SIDE = Math.floor((PAGE_H - 2 * MARGIN + GAP) / (TAB_H + GAP)); // 13
+const LABEL_INSET = 68; // tip + sticky strip + padding, not available for text
 
 /** Dark text on light tabs, white text on dark ones. */
 function inkFor(hex) {
@@ -89,61 +63,83 @@ export function layoutTabs(spreads) {
   });
 }
 
-const box = (t, current) => {
+/**
+ * A tab's geometry. `extra` (page units) is how much further it's pulled out
+ * on hover: the tab is made that much longer *under the paper* and then slid
+ * outwards with a transform, so it moves smoothly and stays tucked in.
+ */
+const box = (t, current, extra = 0) => {
   const out = current ? PROTRUDE + 14 : PROTRUDE;
   return {
     "--tab-top": t.top,
     "--tab-h": t.height,
-    "--tab-w": out + TUCK,
-    "--tab-x": t.side === "left" ? -out : SPREAD_W - TUCK,
+    "--tab-w": out + TUCK + extra,
+    "--tab-x": t.side === "left" ? -out : SPREAD_W - TUCK - extra,
+    "--extra": extra,
+    "--label-w": out - LABEL_INSET + extra,
     "--tab-color": t.color,
     "--tab-ink": t.ink,
   };
 };
 
+/**
+ * How far to pull a tab out so its whole title shows (0 if it already fits).
+ * Measured from the drawn label, in page units.
+ */
+export function revealDistance(n) {
+  const label = document.querySelector(`.book-tab[data-n="${n}"] .book-tab-label`);
+  if (!label) return 0;
+  const tab = label.parentElement;
+  const tabH = parseFloat(tab.style.getPropertyValue("--tab-h")) || TAB_H;
+  const z = tab.getBoundingClientRect().height / tabH || 1;
+  const hidden = (label.scrollWidth - label.clientWidth) / z;
+  return hidden > 1 ? Math.ceil(hidden + 12) : 0;
+}
+
 /** The coloured tabs, drawn inside the paper layer (under the pages). */
-export function BookTabs({ tabs, current }) {
-  const ref = useRef(null);
-
-  // Fit the labels now, and again once the handwriting font arrives.
-  useLayoutEffect(() => {
-    const run = () => fitLabels(ref.current);
-    run();
-    document.fonts?.addEventListener?.("loadingdone", run);
-    return () => document.fonts?.removeEventListener?.("loadingdone", run);
-  }, [tabs, current]);
-
+export function BookTabs({ tabs, current, pulled }) {
   return (
-    <div className="book-tabs" aria-hidden ref={ref}>
-      {tabs.map((t) => (
-        <div
-          key={t.n}
-          className={`book-tab ${t.side}${t.n === current ? " current" : ""}`}
-          style={box(t, t.n === current)}
-        >
-          <span className="book-tab-label">{t.label}</span>
-        </div>
-      ))}
+    <div className="book-tabs" aria-hidden>
+      {tabs.map((t) => {
+        const extra = pulled?.n === t.n ? pulled.extra : 0;
+        return (
+          <div
+            key={t.n}
+            data-n={t.n}
+            className={`book-tab ${t.side}${t.n === current ? " current" : ""}${extra ? " pulled" : ""}`}
+            style={box(t, t.n === current, extra)}
+          >
+            <span className="book-tab-label">{t.label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-/** Invisible buttons over the tabs (above the canvas) so they can be clicked. */
-export function BookTabHits({ tabs, current, onGo }) {
+/** Invisible buttons over the tabs (above the canvas): click to jump, hover to pull out. */
+export function BookTabHits({ tabs, current, pulled, onGo, onPull }) {
   return (
     <div className="book-tab-hits">
-      {tabs.map((t) => (
-        <button
-          key={t.n}
-          type="button"
-          className={`book-tab-hit ${t.side}`}
-          style={box(t, t.n === current)}
-          onClick={() => onGo(t.n)}
-          title={t.label}
-          aria-label={`Go to ${t.label}`}
-          aria-current={t.n === current ? "page" : undefined}
-        />
-      ))}
+      {tabs.map((t) => {
+        const extra = pulled?.n === t.n ? pulled.extra : 0;
+        return (
+          <button
+            key={t.n}
+            type="button"
+            className={`book-tab-hit ${t.side}${extra ? " pulled" : ""}`}
+            style={box(t, t.n === current, extra)}
+            onClick={() => onGo(t.n)}
+            onPointerEnter={(e) => e.pointerType === "mouse" && onPull(t.n)}
+            onPointerLeave={(e) => e.pointerType === "mouse" && onPull(null)}
+            onFocus={() => onPull(t.n)}
+            onBlur={() => onPull(null)}
+            title={t.label}
+            aria-label={`Go to ${t.label}`}
+            aria-current={t.n === current ? "page" : undefined}
+          />
+        );
+      })}
     </div>
   );
 }

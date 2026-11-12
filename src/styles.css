@@ -1750,26 +1750,23 @@ input {
   position: relative;
   z-index: 1;
   overflow: hidden;
-  /* Whole title: wraps onto a second line, and the text is shrunk to fit if
-     needed (see fitLabels in BookTabs.jsx). */
-  white-space: normal;
-  overflow-wrap: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: calc(var(--label-w) * var(--z) * 1px);
   font-family: var(--hand);
   font-weight: 700;
-  font-size: calc(var(--fit, 24) * var(--z) * 1px);
-  line-height: 1.08;
+  font-size: calc(min(24px, var(--tab-h) * 0.4px) * var(--z));
+  line-height: 1.1;
   color: var(--tab-ink);
 }
 
 /* Text sits on the part that sticks out (not under the paper or the tip). */
 .book-tab.left .book-tab-label {
   margin-left: calc(30px * var(--z));
-  max-width: calc((var(--tab-w) - 40 - 30 - 30 - 8) * var(--z) * 1px);
 }
 
 .book-tab.right .book-tab-label {
   margin-left: calc((40px + 38px) * var(--z));
-  max-width: calc((var(--tab-w) - 40 - 30 - 30 - 8) * var(--z) * 1px);
 }
 
 .book-tab.current .book-tab-label {
@@ -1830,4 +1827,31 @@ input {
   font-size: 0.85rem;
   box-shadow: 0 4px 16px rgba(60, 40, 20, 0.2);
   cursor: pointer;
+}
+
+/* Hover: slide the tab further out of the book to show the whole title. */
+.book-tab,
+.book-tab-hit {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.book-tab.left.pulled,
+.book-tab-hit.left.pulled {
+  transform: translateX(calc(var(--extra) * var(--z) * -1px));
+}
+
+.book-tab.right.pulled,
+.book-tab-hit.right.pulled {
+  transform: translateX(calc(var(--extra) * var(--z) * 1px));
+}
+
+.book-tab.pulled .book-tab-label {
+  text-overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-tab,
+  .book-tab-hit {
+    transition: none;
+  }
 }

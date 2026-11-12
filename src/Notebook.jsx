@@ -26,7 +26,7 @@ import {
 import { prepareVideo, VideoTooLongError } from "./video";
 import SearchPanel from "./SearchPanel";
 import { PageHeader, PageHeaderView } from "./PageHeader";
-import { BookTabHits, BookTabs, layoutTabs } from "./BookTabs";
+import { BookTabHits, BookTabs, layoutTabs, revealDistance } from "./BookTabs";
 import {
   DEFAULT_OUTLINE_WIDTH,
   MAX_OUTLINE_WIDTH,
@@ -191,6 +191,7 @@ export default function Notebook({ user, onShowBirthday }) {
   const [lastUsed, setLastUsed] = useState(-1);
   const [peerSpreads, setPeerSpreads] = useState({}); // clientId -> { name, spread }
   const [frames, setFrames] = useState([]); // spread frames (hold page titles/dates)
+  const [pulledTab, setPulledTab] = useState(null); // { n, extra } while a tab is hovered
   const headersRef = useRef(null);
   const spreadRef = useRef(0);
   const lastUsedRef = useRef(-1);
@@ -1193,7 +1194,7 @@ export default function Notebook({ user, onShowBirthday }) {
       <div className="paper-spread" ref={paperRef} aria-hidden>
         <div className="paper-cover" />
         {/* Sticky tabs sit on the cover, tucked under the pages. */}
-        <BookTabs tabs={tabs} current={spread} />
+        <BookTabs tabs={tabs} current={spread} pulled={pulledTab} />
         <div className="paper-page left">
           <span className="page-no">{numbers.get(`${spread}-L`)}</span>
         </div>
@@ -1249,7 +1250,13 @@ export default function Notebook({ user, onShowBirthday }) {
       </Excalidraw>
 
       <div className="page-headers" ref={headersRef}>
-        <BookTabHits tabs={tabs} current={spread} onGo={goToSpread} />
+        <BookTabHits
+          tabs={tabs}
+          current={spread}
+          pulled={pulledTab}
+          onGo={goToSpread}
+          onPull={(n) => setPulledTab(n == null ? null : { n, extra: revealDistance(n) })}
+        />
         {["L", "R"].map((side) => (
           <Header
             key={`${spread}-${side}-${viewMode}`}
