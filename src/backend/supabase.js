@@ -120,6 +120,12 @@ export function createSupabaseBackend(url, anonKey) {
       if (error) throw error;
     },
 
+    async listMediaNames() {
+      const { data, error } = await sb.storage.from(BUCKET).list("", { limit: 100 });
+      if (error) throw error;
+      return data.map((f) => f.name);
+    },
+
     async downloadFile(path) {
       const { data, error } = await sb.storage.from(BUCKET).download(path);
       if (error) throw error;

@@ -21,6 +21,13 @@ export default function App() {
   const [coverOpen, setCoverOpen] = useState(false);
   const openCover = useCallback(() => setCoverOpen(true), []);
   const [birthdayReplay, setBirthdayReplay] = useState(0);
+  const [fontProblem, setFontProblem] = useState("");
+
+  useEffect(() => {
+    const onFail = (e) => setFontProblem(e.detail);
+    window.addEventListener("handwriting-font-error", onFail);
+    return () => window.removeEventListener("handwriting-font-error", onFail);
+  }, []);
   const showBirthday = useCallback(() => setBirthdayReplay((n) => n + 1), []);
 
   useEffect(() => {
@@ -71,6 +78,11 @@ export default function App() {
     <>
       <Notebook user={me} onShowBirthday={showBirthday} />
       {coverOpen ? <BirthdayCard replay={birthdayReplay} /> : <Cover onOpen={openCover} />}
+      {fontProblem && (
+        <div className="font-problem" role="status" onClick={() => setFontProblem("")}>
+          The handwriting font didn't load: {fontProblem} <small>(click to close)</small>
+        </div>
+      )}
     </>
   );
 }

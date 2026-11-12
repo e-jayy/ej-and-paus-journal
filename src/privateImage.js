@@ -7,6 +7,8 @@ import { backend } from "./backend";
 
 const CACHE_NAME = "our-notebook";
 const inflight = new Map(); // path -> Promise<Blob | null>
+/** The last reason each file failed to load (for on-screen messages). */
+export const lastError = new Map();
 
 async function cached(path) {
   try {
@@ -42,6 +44,8 @@ export function loadPrivateImage(path) {
               return blob;
             } catch (e) {
               console.warn(`"${path}" didn't load, retrying`, e);
+              lastError.set(path, String(e?.message || e?.error || e?.statusCode || e));
+              if (/not found/i.test(String(e?.message || ""))) break;
               await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
             }
           }

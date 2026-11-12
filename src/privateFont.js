@@ -3,7 +3,11 @@
 // device after the first load, like the private images.
 
 import { HANDWRITING_FONT_NAME, HANDWRITING_FONT_PATH } from "./config";
-import { loadPrivateImage } from "./privateImage";
+import { backend } from "./backend";
+import { lastError, loadPrivateImage } from "./privateImage";
+
+const fail = (reason) =>
+  window.dispatchEvent(new CustomEvent("handwriting-font-error", { detail: reason }));
 
 let started = false;
 
@@ -11,7 +15,18 @@ export function loadHandwritingFont() {
   if (started || typeof FontFace === "undefined") return;
   started = true;
   loadPrivateImage(HANDWRITING_FONT_PATH).then(async (blob) => {
-    if (!blob) return; // falls back to Caveat
+    if (!blob) {
+      // falls back to Caveat
+      let reason = lastError.get(HANDWRITING_FONT_PATH) || "not found";
+      try {
+        const names = await backend.listMediaNames?.();
+        if (names) {
+          reason += `. Looking for "${HANDWRITING_FONT_PATH}"; the storage has: ${names.map((n) => `"${n}"`).join(", ") || "nothing"}`;
+        }
+      } catch {}
+      fail(reason);
+      return;
+    }
     try {
       const face = new FontFace(HANDWRITING_FONT_NAME, await blob.arrayBuffer(), {
         // One regular weight covers every weight, so bold text isn't faked.
@@ -24,6 +39,7 @@ export function loadHandwritingFont() {
       document.fonts.add(face);
     } catch (e) {
       console.warn("Handwriting font didn't load; using Caveat", e);
+      fail(`the file isn't a font the browser can read (${e?.message || e})`);
     }
   });
 }

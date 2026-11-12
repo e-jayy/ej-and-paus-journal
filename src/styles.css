@@ -1814,3 +1814,18 @@ input {
   clip-path: none;
   box-shadow: 0 0 0 2px #fff, 0 0 0 4px #6965db;
 }
+
+.font-problem {
+  position: fixed;
+  z-index: 400;
+  left: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  max-width: min(420px, calc(100vw - 24px));
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fff4e6;
+  color: #8a4b08;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 16px rgba(60, 40, 20, 0.2);
+  cursor: pointer;
+}
