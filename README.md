@@ -1,4 +1,4 @@
-# EJ and Pau's Journal 📔
+# EJ and Pau's Journal
 
 A shared, live journal for two: draw, write, and stick in photos, GIFs and
 videos. Built on [Excalidraw](https://excalidraw.com). You see each other's
@@ -132,7 +132,7 @@ Show birthday card). Then run
 
 ## On an iPad
 - **Make it an app:** open the site in Safari, tap **Share → Add to Home
-  Screen**. It gets a journal icon and opens full-screen, without Safari's
+  Screen**. It opens full-screen, without Safari's
   address bar.
 - **Apple Pencil:** the first time the Pencil touches the page, the journal
   switches to pen mode. The Pencil draws, fingers scroll and pinch-zoom, and a
