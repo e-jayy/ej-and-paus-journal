@@ -1,6 +1,6 @@
-# Our Notebook 📔
+# EJ and Pau's Journal 📔
 
-A shared, live notebook for two: draw, write, and stick in photos, GIFs and
+A shared, live journal for two: draw, write, and stick in photos, GIFs and
 videos. Built on [Excalidraw](https://excalidraw.com). You see each other's
 cursors and edits as they happen.
 
@@ -21,13 +21,13 @@ each other, which is handy for testing.
 2. When it's ready, open **SQL Editor → New query**.
 3. Paste in all of [`supabase/setup.sql`](supabase/setup.sql). **Change the two
    example emails** to yours and hers, then click **Run**.
-   - These two emails are the only ones that can open the notebook. Anyone else
+   - These two emails are the only ones that can open the journal. Anyone else
      who signs up sees "Not on the guest list" and can't read anything.
 4. Go to **Project Settings → API** (also labelled "Data API" / "API Keys") and
    copy the **Project URL** and the **anon / publishable key**.
 
 ### 2. Publish to GitHub Pages
-The site lives at **https://e-jayy.github.io/paula-diary-website/** and is
+The site lives at **https://e-jayy.github.io/ej-and-paus-journal/** and is
 served from the `gh-pages` branch.
 
 1. Copy `.env.example` to `.env.local` and paste in your Supabase Project URL
@@ -74,12 +74,12 @@ on conflict do nothing;
 
 ## Personal touches
 Edit [`src/config.js`](src/config.js) to change the title, her name, and the
-birthday message that pops up every time the notebook is opened (also in ☰ →
+birthday message that pops up every time the journal is opened (also in ☰ →
 Show birthday card). Then run
 `npm run deploy`.
 
 ## Using it
-- **Pages**: the notebook is a series of two-page spreads. Use **‹ ›** at the
+- **Pages**: the journal is a series of two-page spreads. Use **‹ ›** at the
   bottom to turn pages; there's always one blank spread waiting at the end.
   Anything that runs past the paper is hidden beyond the edge, but it still
   exists and shows again if you move it back. Anything moved **entirely** off
@@ -132,9 +132,9 @@ Show birthday card). Then run
 
 ## On an iPad
 - **Make it an app:** open the site in Safari, tap **Share → Add to Home
-  Screen**. It gets a notebook icon and opens full-screen, without Safari's
+  Screen**. It gets a journal icon and opens full-screen, without Safari's
   address bar.
-- **Apple Pencil:** the first time the Pencil touches the page, the notebook
+- **Apple Pencil:** the first time the Pencil touches the page, the journal
   switches to pen mode. The Pencil draws, fingers scroll and pinch-zoom, and a
   resting palm won't leave marks. You can switch this off in the toolbar's
   pen-mode toggle.
@@ -148,18 +148,18 @@ Show birthday card). Then run
   **Saving…**, or **Not saved yet, will keep trying**. On narrow screens only
   the dot shows, and it turns amber until saved.
 - **Nothing is lost if the tab closes mid-save or you're offline:** unsaved
-  changes are kept on that device and sent the next time the notebook is opened.
+  changes are kept on that device and sent the next time the journal is opened.
 - **Download backup** in the ☰ menu saves everything (drawings, text, photos,
   titles, dates) as one `.excalidraw` file. Videos and GIFs stay in Supabase and
   aren't in the file. Supabase's free plan has no automatic backups, so grab one
   now and then. You can open a backup at excalidraw.com to look through it.
 - **Restore from backup…** in the ☰ menu brings back anything from a backup
-  that's missing from the notebook (deleted drawings, photos, pages, or cleared
+  that's missing from the journal (deleted drawings, photos, pages, or cleared
   titles/dates). It shows what it will restore and asks first; nothing that's in
-  the notebook now is changed or overwritten, and it can be undone.
+  the journal now is changed or overwritten, and it can be undone.
 - **Supabase pauses free projects after about a week with no activity.** Your
-  data isn't deleted, but the notebook won't load until you press **Restore
-  project** in the Supabase dashboard (a few minutes). Opening the notebook
+  data isn't deleted, but the journal won't load until you press **Restore
+  project** in the Supabase dashboard (a few minutes). Opening the journal
   counts as activity. To avoid pauses entirely: use a free scheduled "ping"
   service (e.g. cron-job.org) to open
   `https://dqctktqgmfbcycazmkcr.supabase.co/rest/v1/` with the header

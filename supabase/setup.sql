@@ -1,4 +1,4 @@
--- Our Notebook: Supabase setup
+-- EJ and Pau's Journal: Supabase setup
 -- Paste this whole file into Supabase -> SQL Editor -> New query, and press Run.
 -- 1) FIRST change the two emails just below to yours and hers.
 
@@ -31,7 +31,7 @@ $$;
 revoke all on function public.is_member() from public, anon;
 grant execute on function public.is_member() to authenticated;
 
--- ---------- the notebook itself ----------
+-- ---------- the journal itself ----------
 create table if not exists public.elements (
   board text not null default 'main',
   id text not null,

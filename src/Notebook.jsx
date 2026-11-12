@@ -706,7 +706,7 @@ export default function Notebook({ user, onShowBirthday }) {
     if (!excalidraw) return;
     const files = [...fileList].filter((f) => isVideo(f) || f.type.startsWith("image/"));
     if (!files.length) {
-      excalidraw.setToast({ message: "That file type can't go in the notebook.", closable: true });
+      excalidraw.setToast({ message: "That file type can't go in the journal.", closable: true });
       return;
     }
     let { x, y } = at || sceneCenter();
@@ -908,7 +908,7 @@ export default function Notebook({ user, onShowBirthday }) {
     const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `our-notebook-${new Date().toISOString().slice(0, 10)}.excalidraw`;
+    a.download = `ej-and-paus-journal-${new Date().toISOString().slice(0, 10)}.excalidraw`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     ex.setToast({
@@ -1031,11 +1031,11 @@ export default function Notebook({ user, onShowBirthday }) {
     try {
       data = JSON.parse(await file.text());
     } catch {
-      toast("That file isn't a notebook backup.");
+      toast("That file isn't a backup of EJ and Pau's Journal.");
       return;
     }
     if (data?.type !== "excalidraw" || !Array.isArray(data.elements)) {
-      toast("That file isn't a notebook backup.");
+      toast("That file isn't a backup of EJ and Pau's Journal.");
       return;
     }
 
@@ -1080,7 +1080,7 @@ export default function Notebook({ user, onShowBirthday }) {
     }
 
     if (!changes.length) {
-      toast("Nothing to restore: everything in that backup is already in the notebook.");
+      toast("Nothing to restore: everything in that backup is already in the journal.");
       return;
     }
 
@@ -1089,7 +1089,7 @@ export default function Notebook({ user, onShowBirthday }) {
     if (items) lines.push(`• ${plural(items, "missing item")} (drawings, writing, photos…)`);
     if (titles) lines.push(`• titles/dates for ${plural(titles, "spread")}`);
     const ok = window.confirm(
-      `Restore from "${file.name}"?\n\n${lines.join("\n")}\n\nNothing that's in the notebook now will be changed or overwritten. You can undo this.`,
+      `Restore from "${file.name}"?\n\n${lines.join("\n")}\n\nNothing that's in the journal now will be changed or overwritten. You can undo this.`,
     );
     if (!ok) return;
 

@@ -84,7 +84,7 @@ export default function BirthdayCard({ replay = 0 }) {
           )}
 
           <button className="btn" onClick={close} autoFocus>
-            Open our notebook
+            Open EJ and Pau's Journal
           </button>
         </div>
       </div>

@@ -106,7 +106,7 @@ export default function Login() {
         )}
 
         <button className="btn" disabled={busy}>
-          {busy ? "Checking…" : "Open the notebook"}
+          {busy ? "Checking…" : "Open EJ and Pau's Journal"}
         </button>
       </form>
     </div>

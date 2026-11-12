@@ -1,6 +1,6 @@
 // ✏️ Personal touches — edit these before you deploy.
 
-export const NOTEBOOK_TITLE = "Our Notebook";
+export const NOTEBOOK_TITLE = "EJ and Pau's Journal";
 
 // The birthday card that appears every time the notebook is opened.
 // Set SHOW_BIRTHDAY_CARD to false to turn it off.
@@ -11,7 +11,7 @@ export const BIRTHDAY_CARD_IMAGE_PATH = "birthday-card.jpg";
 // Only used if the card image can't be loaded:
 export const BIRTHDAY_NAME = "my love :33";
 export const BIRTHDAY_MESSAGE =
-  "I made us a notebook that lives online, so we can keep " +
+  "I made us a journal that lives online, so we can keep " +
   "writing, drawing and sticking things in it wherever we are. " +
   "Every page from here on is ours.";
 export const BIRTHDAY_SIGNATURE = "— me";

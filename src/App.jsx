@@ -50,7 +50,7 @@ export default function App() {
   }, [user?.id]);
 
   if (user === undefined || (user && member === null)) {
-    return <div className="splash">Opening the notebook…</div>;
+    return <div className="splash">Opening EJ and Pau's Journal…</div>;
   }
 
   if (!user) return <Login />;
@@ -62,7 +62,7 @@ export default function App() {
           <h1>Not on the guest list</h1>
           <p>
             You're signed in as <b>{user.email}</b>, but that email isn't one of the
-            two allowed to open this notebook.
+            two allowed to open EJ and Pau's Journal.
           </p>
           <button className="btn" onClick={() => backend.signOut()}>
             Sign out

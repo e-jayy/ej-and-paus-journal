@@ -1,6 +1,6 @@
 {
-  "name": "Our Notebook",
-  "short_name": "Notebook",
+  "name": "EJ and Pau's Journal",
+  "short_name": "EJ and Pau's Journal",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

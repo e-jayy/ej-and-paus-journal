@@ -120,7 +120,7 @@ export default function Cover({ onOpen }) {
       aria-label={COVER_TITLE}
       aria-busy={!ready}
     >
-      {!ready && <p className="cover-waiting">Opening our journal…</p>}
+      {!ready && <p className="cover-waiting">Opening EJ and Pau's Journal…</p>}
       {/* Hidden until the photo has loaded, so the cover never appears blank. */}
       {src && !ready && (
         <img
@@ -164,7 +164,7 @@ export default function Cover({ onOpen }) {
             </p>
           )}
           <p className="cover-prompt">
-            {touch ? "Tap anywhere" : "Press any button"} to open our journal
+            {touch ? "Tap anywhere" : "Press any button"} to open EJ and Pau's Journal
           </p>
         </>
       )}
