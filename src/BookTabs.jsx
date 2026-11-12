@@ -25,6 +25,14 @@ export const TAB_COLORS = [
   "#ab47bc", // purple
 ];
 
+export const TAB_SHAPES = [
+  { key: "arrow", label: "Arrow" },
+  { key: "round", label: "Rounded" },
+  { key: "square", label: "Square" },
+  { key: "notch", label: "Notched" },
+  { key: "slant", label: "Slanted" },
+];
+
 const PROTRUDE = 230; // how far a tab sticks out past the paper (page units)
 const TUCK = 40; // how much is hidden under the paper
 const TAB_H = 64;
@@ -59,7 +67,15 @@ export function layoutTabs(spreads) {
     const side = i < perSide ? "left" : "right";
     const row = side === "left" ? i : i - perSide;
     const color = s.color || TAB_COLORS[i % TAB_COLORS.length];
-    return { ...s, side, top: MARGIN + row * (height + GAP), height, color, ink: inkFor(color) };
+    return {
+      ...s,
+      side,
+      top: MARGIN + row * (height + GAP),
+      height,
+      color,
+      defaultColor: TAB_COLORS[i % TAB_COLORS.length],
+      ink: s.ink || inkFor(color),
+    };
   });
 }
 
@@ -79,6 +95,9 @@ const box = (t, current, extra = 0) => {
     "--label-w": out - LABEL_INSET + extra,
     "--tab-color": t.color,
     "--tab-ink": t.ink,
+    "--tab-font": t.font || "var(--hand)",
+    "--tab-weight": t.bold === false ? 400 : 700,
+    "--tab-style": t.italic ? "italic" : "normal",
   };
 };
 
@@ -97,7 +116,7 @@ export function revealDistance(n) {
 }
 
 /** The coloured tabs, drawn inside the paper layer (under the pages). */
-export function BookTabs({ tabs, current, pulled }) {
+export function BookTabs({ tabs, current, pulled, editing }) {
   return (
     <div className="book-tabs" aria-hidden>
       {tabs.map((t) => {
@@ -106,7 +125,10 @@ export function BookTabs({ tabs, current, pulled }) {
           <div
             key={t.n}
             data-n={t.n}
-            className={`book-tab ${t.side}${t.n === current ? " current" : ""}${extra ? " pulled" : ""}`}
+            data-shape={t.shape || "arrow"}
+            className={`book-tab ${t.side}${t.n === current ? " current" : ""}${extra ? " pulled" : ""}${
+              t.n === editing ? " editing" : ""
+            }`}
             style={box(t, t.n === current, extra)}
           >
             <span className="book-tab-label">{t.label}</span>
@@ -118,7 +140,7 @@ export function BookTabs({ tabs, current, pulled }) {
 }
 
 /** Invisible buttons over the tabs (above the canvas): click to jump, hover to pull out. */
-export function BookTabHits({ tabs, current, pulled, onGo, onPull }) {
+export function BookTabHits({ tabs, current, pulled, viewMode, onGo, onEdit, onPull }) {
   return (
     <div className="book-tab-hits">
       {tabs.map((t) => {
@@ -129,13 +151,14 @@ export function BookTabHits({ tabs, current, pulled, onGo, onPull }) {
             type="button"
             className={`book-tab-hit ${t.side}${extra ? " pulled" : ""}`}
             style={box(t, t.n === current, extra)}
-            onClick={() => onGo(t.n)}
+            // View mode: jump to the spread. Edit mode: style the tab.
+            onClick={() => (viewMode ? onGo(t.n) : onEdit(t.n))}
             onPointerEnter={(e) => e.pointerType === "mouse" && onPull(t.n)}
             onPointerLeave={(e) => e.pointerType === "mouse" && onPull(null)}
             onFocus={() => onPull(t.n)}
             onBlur={() => onPull(null)}
             title={t.label}
-            aria-label={`Go to ${t.label}`}
+            aria-label={viewMode ? `Go to ${t.label}` : `Style the tab for ${t.label}`}
             aria-current={t.n === current ? "page" : undefined}
           />
         );

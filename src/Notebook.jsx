@@ -25,7 +25,8 @@ import {
 } from "./media";
 import { prepareVideo, VideoTooLongError } from "./video";
 import SearchPanel from "./SearchPanel";
-import { PageHeader, PageHeaderView } from "./PageHeader";
+import { PageHeader, PageHeaderView, TITLE_FONTS } from "./PageHeader";
+import TabStylePanel from "./TabStylePanel";
 import { BookTabHits, BookTabs, layoutTabs, revealDistance } from "./BookTabs";
 import {
   DEFAULT_OUTLINE_WIDTH,
@@ -192,6 +193,7 @@ export default function Notebook({ user, onShowBirthday }) {
   const [peerSpreads, setPeerSpreads] = useState({}); // clientId -> { name, spread }
   const [frames, setFrames] = useState([]); // spread frames (hold page titles/dates)
   const [pulledTab, setPulledTab] = useState(null); // { n, extra } while a tab is hovered
+  const [editingTab, setEditingTab] = useState(null); // spread whose tab is being styled
   const headersRef = useRef(null);
   const spreadRef = useRef(0);
   const lastUsedRef = useRef(-1);
@@ -890,7 +892,16 @@ export default function Notebook({ user, onShowBirthday }) {
                   year: "numeric",
                 })
               : `Pages ${pagesLabel(n)}`);
-          return { n, label, color: meta.tabColor };
+          return {
+            n,
+            label,
+            color: meta.tabColor,
+            shape: meta.tabShape,
+            ink: meta.tabInk,
+            font: meta.tabFont && TITLE_FONTS.find((f) => f.key === meta.tabFont)?.family,
+            bold: meta.tabBold,
+            italic: meta.tabItalic,
+          };
         }),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1194,7 +1205,7 @@ export default function Notebook({ user, onShowBirthday }) {
       <div className="paper-spread" ref={paperRef} aria-hidden>
         <div className="paper-cover" />
         {/* Sticky tabs sit on the cover, tucked under the pages. */}
-        <BookTabs tabs={tabs} current={spread} pulled={pulledTab} />
+        <BookTabs tabs={tabs} current={spread} pulled={pulledTab} editing={viewMode ? null : editingTab} />
         <div className="paper-page left">
           <span className="page-no">{numbers.get(`${spread}-L`)}</span>
         </div>
@@ -1254,7 +1265,9 @@ export default function Notebook({ user, onShowBirthday }) {
           tabs={tabs}
           current={spread}
           pulled={pulledTab}
+          viewMode={viewMode}
           onGo={goToSpread}
+          onEdit={setEditingTab}
           onPull={(n) => setPulledTab(n == null ? null : { n, extra: revealDistance(n) })}
         />
         {["L", "R"].map((side) => (
@@ -1272,6 +1285,22 @@ export default function Notebook({ user, onShowBirthday }) {
       </div>
 
       {photoBar}
+      {editingTab != null &&
+        !viewMode &&
+        (() => {
+          const t = tabs.find((x) => x.n === editingTab);
+          if (!t) return null;
+          return (
+            <TabStylePanel
+              key={editingTab}
+              label={t.label}
+              meta={spreadMeta(frames.find((f) => f.id === spreadId(editingTab)))}
+              defaultColor={t.defaultColor}
+              onCommit={(patch) => updatePageMeta(editingTab, patch)}
+              onClose={() => setEditingTab(null)}
+            />
+          );
+        })()}
       {searchOpen && (
         <SearchPanel frames={frames} numbers={numbers} onGo={goToSpread} onClose={closeSearch} />
       )}

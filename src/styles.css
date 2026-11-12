@@ -1753,8 +1753,9 @@ input {
   white-space: nowrap;
   text-overflow: ellipsis;
   max-width: calc(var(--label-w) * var(--z) * 1px);
-  font-family: var(--hand);
-  font-weight: 700;
+  font-family: var(--tab-font, var(--hand));
+  font-weight: var(--tab-weight, 700);
+  font-style: var(--tab-style, normal);
   font-size: calc(min(24px, var(--tab-h) * 0.4px) * var(--z));
   line-height: 1.1;
   color: var(--tab-ink);
@@ -1854,4 +1855,79 @@ input {
   .book-tab-hit {
     transition: none;
   }
+}
+
+/* ---------- tab end shapes (arrow is the default above) ---------- */
+
+.book-tab.left[data-shape="round"]::before {
+  clip-path: inset(0 round calc(var(--tab-h) * var(--z) * 0.5px) 0 0 calc(var(--tab-h) * var(--z) * 0.5px));
+}
+.book-tab.right[data-shape="round"]::before {
+  clip-path: inset(0 round 0 calc(var(--tab-h) * var(--z) * 0.5px) calc(var(--tab-h) * var(--z) * 0.5px) 0);
+}
+.book-tab[data-shape="square"]::before {
+  clip-path: inset(0 round calc(3px * var(--z)));
+}
+.book-tab.left[data-shape="notch"]::before {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, calc(24px * var(--z)) 50%);
+}
+.book-tab.right[data-shape="notch"]::before {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 24px * var(--z)) 50%, 100% 100%, 0 100%);
+}
+.book-tab.left[data-shape="slant"]::before {
+  clip-path: polygon(calc(28px * var(--z)) 0, 100% 0, 100% 100%, 0 100%);
+}
+.book-tab.right[data-shape="slant"]::before {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 28px * var(--z)) 100%, 0 100%);
+}
+
+/* The tab being styled gets a soft highlight. */
+.book-tab.editing {
+  filter: drop-shadow(0 0 calc(5px * var(--z)) rgba(105, 101, 219, 0.9))
+    drop-shadow(0 calc(2px * var(--z)) calc(3px * var(--z)) rgba(0, 0, 0, 0.35));
+}
+
+/* ---------- tab style panel ---------- */
+
+.tab-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tab-panel-title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tp-shape {
+  padding: 0 6px;
+}
+
+.tp-shape-preview {
+  display: block;
+  width: 26px;
+  height: 14px;
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.tp-shape-preview[data-shape="arrow"] {
+  clip-path: polygon(0 0, 72% 0, 100% 50%, 72% 100%, 0 100%);
+}
+.tp-shape-preview[data-shape="round"] {
+  border-radius: 0 7px 7px 0;
+}
+.tp-shape-preview[data-shape="square"] {
+  border-radius: 2px;
+}
+.tp-shape-preview[data-shape="notch"] {
+  clip-path: polygon(0 0, 100% 0, 78% 50%, 100% 100%, 0 100%);
+}
+.tp-shape-preview[data-shape="slant"] {
+  clip-path: polygon(0 0, 100% 0, 76% 100%, 0 100%);
 }
