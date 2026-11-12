@@ -11,6 +11,9 @@
   /* Mostlove Beauty is loaded privately after sign-in (see privateFont.js);
      until then (e.g. on the sign-in screen) Caveat stands in. */
   --hand: "Mostlove Beauty", "Caveat", "Segoe Print", cursive;
+  /* Interface text (page-turner, search, labels…) uses a traditional font;
+     the handwriting font is kept for the journal itself. */
+  --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 * {
@@ -54,9 +57,10 @@ input {
   height: 100%;
   display: grid;
   place-items: center;
-  font-family: var(--hand);
-  font-size: 1.8rem;
+  font-family: var(--ui);
   color: var(--ink-soft);
+  font-size: 1.05rem;
+  font-weight: 500;
 }
 
 /* ---------- login / paper screens ---------- */
@@ -270,11 +274,12 @@ input {
   height: 100%;
   display: grid;
   place-items: center;
-  font-family: var(--hand);
-  font-size: 1.3rem;
+  font-family: var(--ui);
   color: var(--ink-soft);
   background: var(--paper-deep);
   border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .welcome-title {
@@ -589,11 +594,13 @@ input {
 
 .cover-prompt {
   margin: 0;
-  font-family: var(--hand);
-  font-size: clamp(1.4rem, 3.4vh, 2rem);
+  font-family: var(--ui);
   color: #fbf6ec;
   text-align: center;
   animation: prompt-pulse 2.2s ease-in-out infinite;
+  font-size: clamp(0.95rem, 2.2vh, 1.15rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .cover-screen.opening {
@@ -760,9 +767,11 @@ input {
 .pager-label {
   min-width: 7.5rem;
   text-align: center;
-  font-family: var(--hand);
-  font-size: 1.35rem;
+  font-family: var(--ui);
   color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .pager .peer-jump {
@@ -1066,8 +1075,8 @@ input {
 
 .search-head h2 {
   margin: 0;
-  font-family: var(--hand);
-  font-size: 1.7rem;
+  font-family: var(--ui);
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
@@ -1177,10 +1186,10 @@ input {
 }
 
 .result-title {
-  font-family: var(--hand);
-  font-size: 1.35rem;
-  font-weight: 700;
+  font-family: var(--ui);
   line-height: 1.1;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .result-meta {
@@ -1217,8 +1226,8 @@ input {
 }
 
 .photo-bar-label {
-  font-family: var(--hand);
-  font-size: 1.3rem;
+  font-family: var(--ui);
+  font-size: 0.85rem;
   font-weight: 700;
 }
 
@@ -1566,10 +1575,12 @@ input {
 /* Cover: a quiet "opening…" while the photo loads, then the book appears. */
 .cover-waiting {
   margin: 0;
-  font-family: var(--hand);
-  font-size: clamp(1.4rem, 3.4vh, 2rem);
+  font-family: var(--ui);
   color: rgba(251, 246, 236, 0.75);
   animation: prompt-pulse 1.6s ease-in-out infinite;
+  font-size: clamp(0.95rem, 2.2vh, 1.15rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .cover-preload {
@@ -1930,4 +1941,18 @@ input {
 }
 .tp-shape-preview[data-shape="slant"] {
   clip-path: polygon(0 0, 100% 0, 76% 100%, 0 100%);
+}
+
+/* Sign-in screen: interface text in the traditional font. */
+.paper-card .handwritten {
+  font-family: var(--ui);
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.anniversary .question {
+  font-family: var(--ui);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink);
 }
