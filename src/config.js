@@ -45,6 +45,11 @@ export const anniversaryPassword = (month, day) =>
 export const COVER_IMAGE_PATH = "journal-cover.jpg";
 export const COVER_TITLE = "EJ & Pau's Journal";
 
+// The notebook's handwriting font (free for personal use, so it's kept in the
+// private "media" bucket rather than this public repo). Loaded after sign-in.
+export const HANDWRITING_FONT_PATH = "Mostlove Beauty.ttf";
+export const HANDWRITING_FONT_NAME = "Mostlove Beauty";
+
 // Largest photo / video / GIF you can upload, in megabytes.
 // Supabase's free plan caps single files at 50 MB.
 export const MAX_UPLOAD_MB = 50;

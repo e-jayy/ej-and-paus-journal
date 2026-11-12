@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { backend } from "./backend";
 import Cover from "./Cover";
+import { loadHandwritingFont } from "./privateFont";
 import Login from "./Login";
 import Notebook from "./Notebook";
 import BirthdayCard from "./BirthdayCard";
@@ -29,6 +30,7 @@ export default function App() {
 
   useEffect(() => {
     setMember(null);
+    if (user) loadHandwritingFont();
     setCoverOpen(false);
     if (!user) return;
     backend

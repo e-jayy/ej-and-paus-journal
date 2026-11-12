@@ -18,7 +18,7 @@ export const TITLE_FONTS = [
   { key: "normal", label: "Normal", family: '"Nunito", system-ui, sans-serif', size: 34, weight: 600 },
   { key: "code", label: "Code", family: '"Comic Shanns", "Courier New", monospace', size: 32, weight: 400 },
   // …plus a few journal-ish extras.
-  { key: "hand", label: "Handwriting", family: '"Caveat", cursive', size: 42, weight: 700 },
+  { key: "hand", label: "Handwriting", family: '"Mostlove Beauty", "Caveat", cursive', size: 42, weight: 400 },
   { key: "marker", label: "Marker", family: '"Permanent Marker", cursive', size: 32, weight: 400 },
   { key: "serif", label: "Serif", family: '"Fraunces", Georgia, serif', size: 34, weight: 700 },
   { key: "type", label: "Typewriter", family: '"Special Elite", "Courier New", monospace', size: 32, weight: 400 },

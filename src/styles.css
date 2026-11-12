@@ -8,7 +8,9 @@
   --tape: rgba(255, 214, 165, 0.75);
   --line: rgba(120, 150, 200, 0.18);
   --serif: "Fraunces", Georgia, serif;
-  --hand: "Caveat", "Segoe Print", cursive;
+  /* Mostlove Beauty is loaded privately after sign-in (see privateFont.js);
+     until then (e.g. on the sign-in screen) Caveat stands in. */
+  --hand: "Mostlove Beauty", "Caveat", "Segoe Print", cursive;
 }
 
 * {
